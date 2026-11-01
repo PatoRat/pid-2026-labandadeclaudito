@@ -39,9 +39,18 @@ export function PlayersEditDialog({
 
   const [abierto, setAbierto] = useState(false)
   const [completa, setCompleta] = useState(jugadores === null)
-  const [cantidadJugadores, setCantidadJugadores] = useState(jugadores ?? 1)
+  // String para poder borrar y escribir libre; se acota al salir del campo.
+  const [cantidadTexto, setCantidadTexto] = useState(String(jugadores ?? 1))
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+
+  // Normaliza el texto a un entero válido (1..máximo). El server re-normaliza.
+  function cantidadParaMandar() {
+    const n = parseInt(cantidadTexto, 10)
+    if (Number.isNaN(n) || n < 1) return 1
+    if (n > maxJugadores) return maxJugadores
+    return n
+  }
 
   async function guardar() {
     setError('')
@@ -50,7 +59,7 @@ export function PlayersEditDialog({
     const res = await fetch(`/api/bookings/${bookingId}/players`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jugadores: completa ? null : cantidadJugadores }),
+      body: JSON.stringify({ jugadores: completa ? null : cantidadParaMandar() }),
     })
     const json = await res.json()
 
@@ -105,18 +114,13 @@ export function PlayersEditDialog({
                 type="number"
                 min={1}
                 max={maxJugadores}
-                value={cantidadJugadores}
-                onChange={(e) => {
-                  const n = Number(e.target.value)
-                  if (Number.isNaN(n)) return
-                  // Nunca negativo ni más que el máximo del deporte.
-                  if (n < 1) setCantidadJugadores(1)
-                  else if (n > maxJugadores) setCantidadJugadores(maxJugadores)
-                  else setCantidadJugadores(n)
-                }}
+                value={cantidadTexto}
+                // Se escribe libre; se acota a 1..máximo al salir del campo
+                onChange={(e) => setCantidadTexto(e.target.value)}
+                onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
               />
               <p className="text-muted-foreground text-sm">
-                {textoJugadoresFaltantes(deporte, cantidadJugadores) ??
+                {textoJugadoresFaltantes(deporte, cantidadParaMandar()) ??
                   `Con ${maxJugadores} jugadores queda completa.`}
               </p>
             </div>

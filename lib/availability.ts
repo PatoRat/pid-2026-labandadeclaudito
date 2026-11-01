@@ -100,6 +100,11 @@ export async function getAvailableSlots(
     horaFin: string
     disponible: boolean
     bloqueado: boolean
+    // reservada: ocupada por una reserva (no por un bloqueo ni por otro motivo).
+    // jugadores: cuántos cargó esa reserva (null = completa). Sirve para mostrar
+    // el cupo y el precio del turno que ya tomó otro jugador.
+    reservada: boolean
+    jugadores: number | null
     precio: Prisma.Decimal
   }[]
   porcentajeSena: number
@@ -123,7 +128,7 @@ export async function getAvailableSlots(
         estado: { not: 'CANCELADA' },
         NOT: pendientesVencidas(),
       },
-      select: { horaInicio: true },
+      select: { horaInicio: true, jugadores: true },
     }),
     getBlocksOfDay(canchaId, fecha),
     // Si mira un jugador, también se marcan ocupados los turnos que se cruzan
@@ -142,6 +147,8 @@ export async function getAvailableSlots(
 
   const turnos = generateSlots(cancha.horaApertura, cancha.horaCierre, cancha.duracionTurnoMin)
   const horasOcupadas = new Set(reservas.map((r) => r.horaInicio))
+  // Jugadores de la reserva que ocupa cada hora, para mostrar el cupo del turno
+  const jugadoresPorHora = new Map(reservas.map((r) => [r.horaInicio, r.jugadores]))
 
   const dia = diaDeReserva(fecha)
   const minAdvanceMinutes = cancha.minAdvanceMinutes ?? cancha.complejo.minAdvanceMinutesDefault
@@ -155,16 +162,19 @@ export async function getAvailableSlots(
     // bloqueado aparte de disponible: la búsqueda lo usa para mostrar en gris
     // una cancha que ese día no tiene turnos porque el dueño la bloqueó
     const bloqueado = isSlotBlocked(horaInicio, horaFin, bloqueosDelDia)
+    const reservada = horasOcupadas.has(horaInicio)
 
     return {
       horaInicio,
       horaFin,
       disponible:
-        !horasOcupadas.has(horaInicio) &&
+        !reservada &&
         !isTooSoonToBook(dia, horaInicio, minAdvanceMinutes) &&
         !bloqueado &&
         !seCruzaConReservaDelJugador,
       bloqueado,
+      reservada,
+      jugadores: jugadoresPorHora.get(horaInicio) ?? null,
       precio: precioProporcional(
         precioDelTurno(cancha.precioBase, cancha.preciosEspeciales, diaSemana, horaInicio),
         horaInicio,

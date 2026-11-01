@@ -36,3 +36,10 @@ export function textoJugadoresFaltantes(deporte: Deporte, jugadores: number | nu
     ? 'Falta 1 jugador para completar'
     : `Faltan ${faltan} jugadores para completar`
 }
+
+// Cupo "cargados/máximo" (ej. "6/10") para mostrar en un turno ya reservado.
+// null = completa, así que se muestra el máximo (ej. "10/10").
+export function textoCupo(deporte: Deporte, jugadores: number | null): string {
+  const max = maxJugadoresPorDeporte[deporte]
+  return `${jugadores ?? max}/${max}`
+}

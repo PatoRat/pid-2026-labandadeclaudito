@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { jugadoresFaltantes, normalizarJugadores, textoJugadoresFaltantes } from './jugadores'
+import {
+  jugadoresFaltantes,
+  normalizarJugadores,
+  textoCupo,
+  textoJugadoresFaltantes,
+} from './jugadores'
 
 describe('normalizarJugadores', () => {
   test('null se mantiene como completa', () => {
@@ -48,5 +53,16 @@ describe('textoJugadoresFaltantes', () => {
 
   test('plural cuando faltan varios', () => {
     expect(textoJugadoresFaltantes('FUTBOL_5', 6)).toBe('Faltan 4 jugadores para completar')
+  })
+})
+
+describe('textoCupo', () => {
+  test('completa (null) muestra el máximo sobre el máximo', () => {
+    expect(textoCupo('FUTBOL_5', null)).toBe('10/10')
+  })
+
+  test('incompleta muestra los cargados sobre el máximo', () => {
+    expect(textoCupo('FUTBOL_5', 6)).toBe('6/10')
+    expect(textoCupo('PADEL', 3)).toBe('3/4')
   })
 })

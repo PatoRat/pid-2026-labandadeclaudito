@@ -24,11 +24,19 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MINUTOS_PARA_PAGAR_SENA, venceLaSena } from '@/lib/estado-reserva'
 import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { diaEnPalabras } from '@/lib/fechas'
-import { maxJugadoresPorDeporte, textoJugadoresFaltantes } from '@/lib/jugadores'
+import { maxJugadoresPorDeporte, textoCupo, textoJugadoresFaltantes } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
 
-type Slot = { horaInicio: string; horaFin: string; disponible: boolean; precio: string }
+type Slot = {
+  horaInicio: string
+  horaFin: string
+  disponible: boolean
+  // reservada: la tomó otra reserva; jugadores: cuántos cargó (null = completa)
+  reservada: boolean
+  jugadores: number | null
+  precio: string
+}
 // reservando -> pendiente (reserva creada, falta la seña) -> pagando -> exito
 type EstadoConfirmacion = 'idle' | 'reservando' | 'pendiente' | 'pagando' | 'exito' | 'error'
 
@@ -67,9 +75,11 @@ export function CourtSlotPicker({
   const [porcentajeSena, setPorcentajeSena] = useState(0)
   const [minAdvanceMinutes, setMinAdvanceMinutes] = useState(0)
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
-  // Si el turno se reserva completo (default) o falta gente; cuántos hay
+  // Si el turno se reserva completo (default) o falta gente; cuántos hay.
+  // La cantidad es string para poder borrarla y escribir libre: se normaliza
+  // (acota a 1..máximo) recién al salir del campo (onBlur).
   const [completa, setCompleta] = useState(true)
-  const [cantidadJugadores, setCantidadJugadores] = useState(1)
+  const [cantidadTexto, setCantidadTexto] = useState('1')
   const [estado, setEstado] = useState<EstadoConfirmacion>('idle')
   const [mensajeError, setMensajeError] = useState('')
   const [reservaHecha, setReservaHecha] = useState<{
@@ -179,6 +189,15 @@ export function CourtSlotPicker({
     ? (Number(slotSeleccionado.precio) * porcentajeSena) / 100
     : 0
 
+  // Normaliza el texto del input a un entero válido (1..máximo) para mandarlo.
+  // El server igual re-normaliza.
+  function cantidadParaMandar() {
+    const n = parseInt(cantidadTexto, 10)
+    if (Number.isNaN(n) || n < 1) return 1
+    if (n > maxJugadores) return maxJugadores
+    return n
+  }
+
   // Paso 1: la reserva se crea PENDIENTE (de seña). El turno ya queda tomado.
   async function reservar() {
     if (!horaSeleccionada || !slotSeleccionado) return
@@ -193,7 +212,7 @@ export function CourtSlotPicker({
         fecha: format(fecha, 'yyyy-MM-dd'),
         horaInicio: horaSeleccionada,
         // Completa = no se manda; incompleta = cuántos jugadores hay
-        jugadores: completa ? undefined : cantidadJugadores,
+        jugadores: completa ? undefined : cantidadParaMandar(),
       }),
     })
     const json = await res.json()
@@ -247,7 +266,7 @@ export function CourtSlotPicker({
     setEstado('idle')
     setReservaHecha(null)
     setCompleta(true)
-    setCantidadJugadores(1)
+    setCantidadTexto('1')
   }
 
   // El pie (fijo abajo del sheet) aparece cuando hay algo para hacer o avisar
@@ -274,20 +293,27 @@ export function CourtSlotPicker({
           setEstado('idle')
           setMensajeError('')
           setCompleta(true)
-          setCantidadJugadores(1)
+          setCantidadTexto('1')
         }}
         className={
           !slot.disponible
-            ? 'bg-muted text-muted-foreground flex h-11 cursor-not-allowed flex-col items-center justify-center rounded-xl text-sm font-medium line-through opacity-60'
+            ? 'bg-muted text-muted-foreground flex min-h-11 cursor-not-allowed flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-medium opacity-60'
             : seleccionado
-              ? 'bg-primary text-primary-foreground shadow-button flex h-11 flex-col items-center justify-center rounded-xl text-sm font-bold'
-              : 'bg-card text-card-foreground shadow-soft hover:bg-accent hover:text-accent-foreground flex h-11 flex-col items-center justify-center rounded-xl text-sm font-semibold transition-colors'
+              ? 'bg-primary text-primary-foreground shadow-button flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-bold'
+              : 'bg-card text-card-foreground shadow-soft hover:bg-accent hover:text-accent-foreground flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-semibold transition-colors'
         }
       >
-        {slot.horaInicio}
-        {esPrecioEspecial && slot.disponible && (
+        {/* En un turno tomado, la hora va tachada pero el precio y el cupo se
+            leen igual: por eso el line-through va solo en la hora. */}
+        <span className={!slot.disponible ? 'line-through' : undefined}>{slot.horaInicio}</span>
+        {esPrecioEspecial && (slot.disponible || slot.reservada) && (
           <span className="text-[10px] leading-none font-normal opacity-80">
             {formatPrecio(slot.precio)}
+          </span>
+        )}
+        {slot.reservada && (
+          <span className="text-[10px] leading-none font-normal opacity-80">
+            {textoCupo(deporte, slot.jugadores)}
           </span>
         )}
       </button>
@@ -460,19 +486,13 @@ export function CourtSlotPicker({
                       type="number"
                       min={1}
                       max={maxJugadores}
-                      value={cantidadJugadores}
-                      onChange={(e) => {
-                        const n = Number(e.target.value)
-                        if (Number.isNaN(n)) return
-                        // Nunca negativo ni más que el máximo del deporte: si se
-                        // pasa, el programa pone el máximo (queda completa).
-                        if (n < 1) setCantidadJugadores(1)
-                        else if (n > maxJugadores) setCantidadJugadores(maxJugadores)
-                        else setCantidadJugadores(n)
-                      }}
+                      value={cantidadTexto}
+                      // Se escribe libre; se acota a 1..máximo al salir del campo
+                      onChange={(e) => setCantidadTexto(e.target.value)}
+                      onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
                     />
                     <p className="text-muted-foreground text-sm">
-                      {textoJugadoresFaltantes(deporte, cantidadJugadores) ??
+                      {textoJugadoresFaltantes(deporte, cantidadParaMandar()) ??
                         `Con ${maxJugadores} jugadores queda completa.`}
                     </p>
                   </div>
