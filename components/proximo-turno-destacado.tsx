@@ -18,6 +18,7 @@ export function ProximoTurnoDestacado({
   cancha,
   deporte,
   lugar,
+  nota,
   children,
 }: {
   etiqueta: string
@@ -27,6 +28,8 @@ export function ProximoTurnoDestacado({
   cancha: string
   deporte: Deporte
   lugar: string
+  // Renglón chico extra bajo el lugar (ej: cuántos jugadores faltan)
+  nota?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -77,6 +80,7 @@ export function ProximoTurnoDestacado({
           <MapPin className="size-3.5 shrink-0" />
           {lugar}
         </p>
+        {nota && <p className="text-acento-foreground/90 mt-0.5 text-sm">{nota}</p>}
 
         {children}
       </div>

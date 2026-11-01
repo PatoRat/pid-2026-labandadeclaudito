@@ -203,6 +203,10 @@ model Reserva {
   // Precio del turno congelado al momento de reservar (no se recalcula
   // aunque después cambie precioBase o haya un PrecioEspecial nuevo).
   precioTurno         Decimal       @db.Decimal(10, 2)
+  // Jugadores cargados cuando la reserva está incompleta. null = completa
+  // (también las reservas viejas). Un número menor al máximo del deporte =
+  // incompleta; faltan (máximo - jugadores) para completar.
+  jugadores           Int?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 

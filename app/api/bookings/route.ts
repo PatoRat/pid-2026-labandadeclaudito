@@ -6,6 +6,7 @@ import { precioDelTurno, precioProporcional } from '@/lib/availability'
 import { getBlocksOfDay, isSlotBlocked } from '@/lib/blocks'
 import { pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
+import { normalizarJugadores } from '@/lib/jugadores'
 import {
   DIAS_MAXIMOS_DE_ANTICIPACION,
   diaSemanaDeReserva,
@@ -159,6 +160,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ese horario ya fue reservado' }, { status: 409 })
   }
 
+  // Sin jugadores en el body la reserva es completa (null). Con un número,
+  // está incompleta: se normaliza al máximo del deporte (nunca más que el
+  // máximo, nunca negativo).
+  const jugadores =
+    parsed.data.jugadores === undefined
+      ? null
+      : normalizarJugadores(cancha.deporte, parsed.data.jugadores)
+
   // La reserva nace PENDIENTE (de seña): pasa a CONFIRMADA recién cuando el
   // jugador paga la seña en POST /api/bookings/[id]/deposit.
   try {
@@ -171,6 +180,7 @@ export async function POST(request: Request) {
         horaFin,
         estado: 'PENDIENTE',
         precioTurno,
+        jugadores,
       },
     })
     return NextResponse.json({ reserva }, { status: 201 })

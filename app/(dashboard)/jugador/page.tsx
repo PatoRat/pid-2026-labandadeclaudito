@@ -7,6 +7,7 @@ import { dondeProximas, pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
 import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
+import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -127,6 +128,7 @@ export default async function JugadorHomePage() {
                 cancha={proximoTurno.cancha.nombre}
                 deporte={proximoTurno.cancha.deporte}
                 lugar={`${proximoTurno.cancha.complejo.nombre} · ${proximoTurno.cancha.complejo.zona}`}
+                nota={textoJugadoresFaltantes(proximoTurno.cancha.deporte, proximoTurno.jugadores)}
               >
                 {/* Pendiente de seña: la cuenta regresiva va sobre fondo
                     claro, porque sus colores no se leen sobre el verde */}
@@ -178,6 +180,7 @@ export default async function JugadorHomePage() {
                         horaFin={reserva.horaFin}
                         deporte={reserva.cancha.deporte}
                         detalle={`${reserva.cancha.nombre} · ${reserva.cancha.complejo.nombre}, ${reserva.cancha.complejo.zona}`}
+                        nota={textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)}
                       >
                         <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
                           <ArrowRight className="size-4" />

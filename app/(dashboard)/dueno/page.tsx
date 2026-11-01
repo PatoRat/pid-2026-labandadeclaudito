@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { dondeProximas } from '@/lib/bookings'
 import { diaEnPalabras, saludoSegunHora } from '@/lib/fechas'
+import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { iniciales } from '@/lib/iniciales'
 import { diaDeHoy, diaDeReserva } from '@/lib/time'
 import { Button } from '@/components/ui/button'
@@ -109,6 +110,7 @@ export default async function DuenoHomePage() {
                 cancha={proximoTurno.cancha.nombre}
                 deporte={proximoTurno.cancha.deporte}
                 lugar={`${proximoTurno.cancha.complejo.nombre} · ${proximoTurno.cancha.complejo.zona}`}
+                nota={textoJugadoresFaltantes(proximoTurno.cancha.deporte, proximoTurno.jugadores)}
               >
                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
                   <p className="flex items-center gap-2.5">
@@ -150,6 +152,7 @@ export default async function DuenoHomePage() {
                         horaFin={reserva.horaFin}
                         deporte={reserva.cancha.deporte}
                         detalle={`${reserva.cancha.nombre} · ${reserva.cancha.complejo.nombre}`}
+                        nota={textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)}
                       >
                         <QuienReservo nombre={reserva.jugador.nombre} />
                       </FilaDeTurno>

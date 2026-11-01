@@ -15,11 +15,16 @@ import {
   Sunset,
   Wallet,
 } from 'lucide-react'
+import type { Deporte } from '@/lib/generated/prisma/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MINUTOS_PARA_PAGAR_SENA, venceLaSena } from '@/lib/estado-reserva'
 import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { diaEnPalabras } from '@/lib/fechas'
+import { maxJugadoresPorDeporte, textoJugadoresFaltantes } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
 
@@ -37,14 +42,17 @@ const periodosDelDia = [
 export function CourtSlotPicker({
   courtId,
   courtName,
+  deporte,
   precioBase,
   fechaInicial,
 }: {
   courtId: string
   courtName: string
+  deporte: Deporte
   precioBase: string
   fechaInicial?: string
 }) {
+  const maxJugadores = maxJugadoresPorDeporte[deporte]
   // fechaInicial viene como YYYY-MM-DD de la búsqueda. Se arma con parse (fecha
   // local): new Date('2026-10-03') sería medianoche UTC y en Argentina mostraría
   // el día anterior. Una fecha que ya pasó no sirve, se arranca en hoy.
@@ -59,6 +67,9 @@ export function CourtSlotPicker({
   const [porcentajeSena, setPorcentajeSena] = useState(0)
   const [minAdvanceMinutes, setMinAdvanceMinutes] = useState(0)
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
+  // Si el turno se reserva completo (default) o falta gente; cuántos hay
+  const [completa, setCompleta] = useState(true)
+  const [cantidadJugadores, setCantidadJugadores] = useState(1)
   const [estado, setEstado] = useState<EstadoConfirmacion>('idle')
   const [mensajeError, setMensajeError] = useState('')
   const [reservaHecha, setReservaHecha] = useState<{
@@ -181,6 +192,8 @@ export function CourtSlotPicker({
         canchaId: courtId,
         fecha: format(fecha, 'yyyy-MM-dd'),
         horaInicio: horaSeleccionada,
+        // Completa = no se manda; incompleta = cuántos jugadores hay
+        jugadores: completa ? undefined : cantidadJugadores,
       }),
     })
     const json = await res.json()
@@ -233,6 +246,8 @@ export function CourtSlotPicker({
     setHoraSeleccionada(null)
     setEstado('idle')
     setReservaHecha(null)
+    setCompleta(true)
+    setCantidadJugadores(1)
   }
 
   // El pie (fijo abajo del sheet) aparece cuando hay algo para hacer o avisar
@@ -258,6 +273,8 @@ export function CourtSlotPicker({
           setHoraSeleccionada(slot.horaInicio)
           setEstado('idle')
           setMensajeError('')
+          setCompleta(true)
+          setCantidadJugadores(1)
         }}
         className={
           !slot.disponible
@@ -413,6 +430,55 @@ export function CourtSlotPicker({
                   </span>
                 </p>
               </div>
+
+              {/* Completa o falta gente. La seña no cambia; si está incompleta
+                  se carga cuántos jugadores hay y se muestra cuántos faltan.
+                  Este subtexto va en su propio renglón, aparte del "(precio
+                  especial)" de arriba, así conviven sin pisarse. */}
+              <div className="space-y-2">
+                <Label>¿Ya tenés el equipo completo?</Label>
+                <RadioGroup
+                  value={completa ? 'completa' : 'incompleta'}
+                  onValueChange={(valor) => setCompleta(valor === 'completa')}
+                  className="flex gap-4"
+                >
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <RadioGroupItem value="completa" />
+                    Completa
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <RadioGroupItem value="incompleta" />
+                    Falta gente
+                  </label>
+                </RadioGroup>
+
+                {!completa && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cantidadJugadores">Cuántos jugadores son</Label>
+                    <Input
+                      id="cantidadJugadores"
+                      type="number"
+                      min={1}
+                      max={maxJugadores}
+                      value={cantidadJugadores}
+                      onChange={(e) => {
+                        const n = Number(e.target.value)
+                        if (Number.isNaN(n)) return
+                        // Nunca negativo ni más que el máximo del deporte: si se
+                        // pasa, el programa pone el máximo (queda completa).
+                        if (n < 1) setCantidadJugadores(1)
+                        else if (n > maxJugadores) setCantidadJugadores(maxJugadores)
+                        else setCantidadJugadores(n)
+                      }}
+                    />
+                    <p className="text-muted-foreground text-sm">
+                      {textoJugadoresFaltantes(deporte, cantidadJugadores) ??
+                        `Con ${maxJugadores} jugadores queda completa.`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <Button size="lg" onClick={reservar} disabled={estado === 'reservando'}>
                 {estado === 'reservando' ? (
                   <Loader2 className="size-4 animate-spin" />

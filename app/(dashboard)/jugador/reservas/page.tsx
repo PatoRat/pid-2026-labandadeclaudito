@@ -7,6 +7,7 @@ import type { Prisma } from '@/lib/generated/prisma/client'
 import { dondeHistorial, dondeProximas } from '@/lib/bookings'
 import { sePuedeDisputar } from '@/lib/disputas'
 import { formatPrecio } from '@/lib/labels'
+import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { montoDelHistorial } from '@/lib/historial'
 import { venceLaSena } from '@/lib/estado-reserva'
 import { calcularPagina } from '@/lib/paginacion'
@@ -32,6 +33,7 @@ import {
   type VistaDeReservas,
 } from '@/components/pestanias-reservas'
 import { PayDepositButton } from '@/components/pay-deposit-button'
+import { PlayersEditDialog } from '@/components/players-edit-dialog'
 import { RefreshWhenDepositExpires } from '@/components/refresh-when-deposit-expires'
 import {
   Table,
@@ -325,6 +327,11 @@ function TarjetaReserva({
 
   const muestraPagar = reserva.estado === 'PENDIENTE' && !yaPaso
   const muestraCancelar = !cancelada && !yaPaso
+  // Los jugadores se editan mientras la reserva sigue activa y el turno no pasó
+  const puedeEditarJugadores = !cancelada && !yaPaso
+  const notaJugadores = puedeEditarJugadores
+    ? textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)
+    : null
   const venceSena = venceLaSena(reserva.createdAt).toISOString()
 
   // Aviso para el diálogo de cancelar: mismo cálculo que hace el endpoint.
@@ -373,6 +380,7 @@ function TarjetaReserva({
         <p className="text-muted-foreground truncate text-sm">
           {reserva.cancha.complejo.nombre} · {reserva.cancha.complejo.direccion}
         </p>
+        {notaJugadores && <p className="text-muted-foreground mt-1 text-sm">{notaJugadores}</p>}
 
         {/* De acá para abajo todas las tarjetas tienen lo mismo a la misma
             altura, esté o no pagada la seña: un renglón con su barra, el
@@ -419,6 +427,15 @@ function TarjetaReserva({
                 />
               )}
             </div>
+          )}
+
+          {puedeEditarJugadores && (
+            <PlayersEditDialog
+              className="mt-2 w-full"
+              bookingId={reserva.id}
+              deporte={reserva.cancha.deporte}
+              jugadores={reserva.jugadores}
+            />
           )}
         </div>
       </div>

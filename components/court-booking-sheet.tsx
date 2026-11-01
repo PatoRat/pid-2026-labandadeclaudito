@@ -78,6 +78,7 @@ export function CourtBookingSheet({
           <CourtSlotPicker
             courtId={courtId}
             courtName={courtName}
+            deporte={deporte}
             precioBase={precioBase}
             fechaInicial={fechaInicial}
           />
