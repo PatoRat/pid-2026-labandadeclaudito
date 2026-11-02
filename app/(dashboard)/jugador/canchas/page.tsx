@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import Link from 'next/link'
-import { Bell, ImageIcon, X } from 'lucide-react'
+import { ImageIcon, X } from 'lucide-react'
 import { formatPrecio } from '@/lib/labels'
 import { activeFilterChips, filtersToQueryString, searchComplexes } from '@/lib/court-search'
 import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
@@ -33,11 +33,6 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
   const verIncompletas = sp.incompletas === '1'
 
   const filtrosAplicados = activeFilterChips(filtros)
-
-  // Links del botón campanita: conservan los filtros actuales
-  const qs = filtersToQueryString(filtros)
-  const hrefIncompletas = `/jugador/canchas${qs === '' ? '?' : `${qs}&`}incompletas=1`
-  const hrefComplejos = `/jugador/canchas${qs}`
 
   // Arma un link conservando el modo actual (incompletas o no)
   function urlConModo(queryString: string) {
@@ -85,7 +80,11 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
         <aside className="hidden xl:block">
           <div className="bg-card shadow-card rounded-3xl px-5 pt-5">
             <h2 className="font-heading mb-5 text-xl font-bold">Filtros</h2>
-            <FiltrosDeBusqueda filtros={filtros} idPrefijo="lateral-" />
+            <FiltrosDeBusqueda
+              filtros={filtros}
+              idPrefijo="lateral-"
+              incompletas={verIncompletas}
+            />
           </div>
         </aside>
 
@@ -96,15 +95,6 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
               cantidadDeFiltros={filtrosAplicados.length}
               incompletas={verIncompletas}
             />
-
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href={verIncompletas ? hrefComplejos : hrefIncompletas} />}
-            >
-              <Bell className="size-4" />
-              {verIncompletas ? 'Ver todos los complejos' : 'Ver reservas incompletas'}
-            </Button>
 
             {filtrosAplicados.map((filtro) => (
               <Link
