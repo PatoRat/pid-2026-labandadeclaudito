@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import {
+  esIncompleta,
   jugadoresFaltantes,
   normalizarJugadores,
+  sumarJugadores,
   textoCupo,
   textoJugadoresFaltantes,
 } from './jugadores'
@@ -15,9 +17,9 @@ describe('normalizarJugadores', () => {
     expect(normalizarJugadores('FUTBOL_5', 6)).toBe(6)
   })
 
-  test('al llegar al máximo o más, queda completa (null)', () => {
-    expect(normalizarJugadores('FUTBOL_5', 10)).toBe(null)
-    expect(normalizarJugadores('FUTBOL_5', 15)).toBe(null)
+  test('acota al máximo (guarda el número, no null)', () => {
+    expect(normalizarJugadores('FUTBOL_5', 10)).toBe(10)
+    expect(normalizarJugadores('FUTBOL_5', 15)).toBe(10)
   })
 
   test('nunca guarda menos de 1', () => {
@@ -64,5 +66,29 @@ describe('textoCupo', () => {
   test('incompleta muestra los cargados sobre el máximo', () => {
     expect(textoCupo('FUTBOL_5', 6)).toBe('6/10')
     expect(textoCupo('PADEL', 3)).toBe('3/4')
+  })
+})
+
+describe('esIncompleta', () => {
+  test('null (completa) no es incompleta', () => {
+    expect(esIncompleta('FUTBOL_5', null)).toBe(false)
+  })
+
+  test('por debajo del máximo es incompleta', () => {
+    expect(esIncompleta('FUTBOL_5', 8)).toBe(true)
+  })
+})
+
+describe('sumarJugadores', () => {
+  test('suma por debajo del máximo deja un número', () => {
+    expect(sumarJugadores('FUTBOL_5', 6, 2)).toBe(8)
+  })
+
+  test('al llegar al máximo queda en el máximo', () => {
+    expect(sumarJugadores('FUTBOL_5', 8, 2)).toBe(10)
+  })
+
+  test('si se pasa del máximo, se acota al máximo', () => {
+    expect(sumarJugadores('FUTBOL_5', 8, 5)).toBe(10)
   })
 })

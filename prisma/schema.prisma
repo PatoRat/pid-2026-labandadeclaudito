@@ -73,10 +73,11 @@ model Usuario {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  complejos         Complejo[] @relation("DuenioComplejos")
-  reservas          Reserva[]  @relation("JugadorReservas")
-  disputas          Disputa[]  @relation("DisputasDelJugador")
-  disputasResueltas Disputa[]  @relation("DisputasResueltas")
+  complejos         Complejo[]             @relation("DuenioComplejos")
+  reservas          Reserva[]              @relation("JugadorReservas")
+  participaciones   ParticipanteReserva[]  @relation("ParticipacionesDelJugador")
+  disputas          Disputa[]              @relation("DisputasDelJugador")
+  disputasResueltas Disputa[]              @relation("DisputasResueltas")
 }
 
 model Complejo {
@@ -210,10 +211,11 @@ model Reserva {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  cancha  Cancha   @relation(fields: [canchaId], references: [id])
-  jugador Usuario  @relation("JugadorReservas", fields: [jugadorId], references: [id])
-  pago    Pago?
-  disputa Disputa?
+  cancha       Cancha                @relation(fields: [canchaId], references: [id])
+  jugador      Usuario               @relation("JugadorReservas", fields: [jugadorId], references: [id])
+  participantes ParticipanteReserva[]
+  pago         Pago?
+  disputa      Disputa?
 
   // Última defensa contra doble reserva: no puede haber dos reservas activas
   // en la misma cancha, fecha y hora de inicio. Las canceladas no cuentan:
@@ -222,6 +224,26 @@ model Reserva {
   @@unique([canchaId, fecha, horaInicio], map: "Reserva_activa_unica", where: raw("estado <> 'CANCELADA'"))
   @@index([jugadorId])
   @@index([canchaId, fecha])
+}
+
+// Jugadores que se sumaron a una reserva incompleta de otro. El creador no va
+// acá (ya es el jugador de la Reserva); sirve para saber quién ya está adentro
+// y así no ofrecerle sumarse de nuevo. La cuenta total de personas vive en
+// Reserva.jugadores; esto es solo la membresía.
+model ParticipanteReserva {
+  id        String @id @default(cuid())
+  reservaId String
+  jugadorId String
+  // Cuántos jugadores aportó al sumarse. Al salirse se resta esto de
+  // Reserva.jugadores, así el cupo vuelve a quedar bien.
+  jugadores Int
+
+  reserva Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  jugador Usuario @relation("ParticipacionesDelJugador", fields: [jugadorId], references: [id])
+
+  // Un jugador no puede sumarse dos veces a la misma reserva
+  @@unique([reservaId, jugadorId])
+  @@index([reservaId])
 }
 
 model Pago {

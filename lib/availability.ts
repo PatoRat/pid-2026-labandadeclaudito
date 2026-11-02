@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { getBlocksOfDay, isSlotBlocked } from '@/lib/blocks'
 import { pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
+import { esIncompleta } from '@/lib/jugadores'
 import { Prisma } from '@/lib/generated/prisma/client'
 import {
   diaDeReserva,
@@ -105,6 +106,10 @@ export async function getAvailableSlots(
     // el cupo y el precio del turno que ya tomó otro jugador.
     reservada: boolean
     jugadores: number | null
+    // reservaId: id de la reserva que ocupa el turno (para poder sumarse).
+    // puedeUnirse: el que mira puede sumarse a esa reserva incompleta.
+    reservaId: string | null
+    puedeUnirse: boolean
     precio: Prisma.Decimal
   }[]
   porcentajeSena: number
@@ -128,7 +133,13 @@ export async function getAvailableSlots(
         estado: { not: 'CANCELADA' },
         NOT: pendientesVencidas(),
       },
-      select: { horaInicio: true, jugadores: true },
+      select: {
+        id: true,
+        horaInicio: true,
+        jugadores: true,
+        jugadorId: true,
+        participantes: { select: { jugadorId: true } },
+      },
     }),
     getBlocksOfDay(canchaId, fecha),
     // Si mira un jugador, también se marcan ocupados los turnos que se cruzan
@@ -147,8 +158,9 @@ export async function getAvailableSlots(
 
   const turnos = generateSlots(cancha.horaApertura, cancha.horaCierre, cancha.duracionTurnoMin)
   const horasOcupadas = new Set(reservas.map((r) => r.horaInicio))
-  // Jugadores de la reserva que ocupa cada hora, para mostrar el cupo del turno
-  const jugadoresPorHora = new Map(reservas.map((r) => [r.horaInicio, r.jugadores]))
+  // La reserva que ocupa cada hora, para mostrar el cupo y decidir si el que
+  // mira puede sumarse
+  const reservaPorHora = new Map(reservas.map((r) => [r.horaInicio, r]))
 
   const dia = diaDeReserva(fecha)
   const minAdvanceMinutes = cancha.minAdvanceMinutes ?? cancha.complejo.minAdvanceMinutesDefault
@@ -163,18 +175,31 @@ export async function getAvailableSlots(
     // una cancha que ese día no tiene turnos porque el dueño la bloqueó
     const bloqueado = isSlotBlocked(horaInicio, horaFin, bloqueosDelDia)
     const reservada = horasOcupadas.has(horaInicio)
+    const reservaDelTurno = reservaPorHora.get(horaInicio)
+    const aTiempo = !isTooSoonToBook(dia, horaInicio, minAdvanceMinutes)
+
+    // El que mira puede sumarse si el turno lo tiene otra reserva incompleta,
+    // él no es el dueño de esa reserva ni ya se sumó, y no tiene un turno que se
+    // cruce. El dueño del complejo (sin jugadorId) nunca se suma.
+    const puedeUnirse =
+      reservaDelTurno !== undefined &&
+      jugadorId !== undefined &&
+      esIncompleta(cancha.deporte, reservaDelTurno.jugadores) &&
+      reservaDelTurno.jugadorId !== jugadorId &&
+      !reservaDelTurno.participantes.some((p) => p.jugadorId === jugadorId) &&
+      !seCruzaConReservaDelJugador &&
+      aTiempo &&
+      !bloqueado
 
     return {
       horaInicio,
       horaFin,
-      disponible:
-        !reservada &&
-        !isTooSoonToBook(dia, horaInicio, minAdvanceMinutes) &&
-        !bloqueado &&
-        !seCruzaConReservaDelJugador,
+      disponible: !reservada && aTiempo && !bloqueado && !seCruzaConReservaDelJugador,
       bloqueado,
       reservada,
-      jugadores: jugadoresPorHora.get(horaInicio) ?? null,
+      jugadores: reservaDelTurno?.jugadores ?? null,
+      reservaId: reservaDelTurno?.id ?? null,
+      puedeUnirse,
       precio: precioProporcional(
         precioDelTurno(cancha.precioBase, cancha.preciosEspeciales, diaSemana, horaInicio),
         horaInicio,

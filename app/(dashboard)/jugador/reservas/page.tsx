@@ -8,13 +8,14 @@ import { dondeHistorial, dondeProximas } from '@/lib/bookings'
 import { sePuedeDisputar } from '@/lib/disputas'
 import { formatPrecio } from '@/lib/labels'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
-import { montoDelHistorial } from '@/lib/historial'
+import { montoDelHistorial, type MontoDelHistorial } from '@/lib/historial'
 import { venceLaSena } from '@/lib/estado-reserva'
 import { calcularPagina } from '@/lib/paginacion'
 import { diaEnPalabras } from '@/lib/fechas'
 import { diaDeReserva, momentoActual, refundsDeposit, turnoYaPaso } from '@/lib/time'
 import { BookingStatusBadge } from '@/components/booking-status-badge'
 import { CancelBookingButton } from '@/components/cancel-booking-button'
+import { LeaveBookingButton } from '@/components/leave-booking-button'
 import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { CeldaCancha, CeldaMonto } from '@/components/celdas-reserva'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
@@ -72,6 +73,17 @@ const tonos = {
   peligro: 'text-destructive',
 }
 
+// El que se sumó no paga seña: en vez del desglose del dueño, se le muestra el
+// precio del turno como dato.
+function montoParticipante(precioTurno: string): MontoDelHistorial {
+  return {
+    etiqueta: 'Precio del turno',
+    monto: formatPrecio(precioTurno),
+    detalle: 'Te sumaste · no pagás seña',
+    tono: 'normal',
+  }
+}
+
 export default async function MisReservasPage({ searchParams }: PageProps<'/jugador/reservas'>) {
   const session = await auth()
   if (!session) redirect('/login')
@@ -85,10 +97,16 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
   // Qué es "próxima" o "historial" lo decide la base (ver dondeProximas),
   // así cuenta y pagina sin traer todas las reservas.
   const ahora = momentoActual()
+  // "Mis reservas" incluye las que creó el jugador y las de otros a las que se
+  // sumó como participante. Se combina con AND para no pisar los OR que ya traen
+  // dondeProximas/dondeHistorial.
+  const membresia: Prisma.ReservaWhereInput = {
+    OR: [{ jugadorId }, { participantes: { some: { jugadorId } } }],
+  }
   const dondePorVista: Record<VistaDeReservas, Prisma.ReservaWhereInput> = {
-    proximas: { jugadorId, ...dondeProximas(ahora) },
-    historial: { jugadorId, ...dondeHistorial(ahora) },
-    canceladas: { jugadorId, estado: 'CANCELADA' },
+    proximas: { AND: [membresia, dondeProximas(ahora)] },
+    historial: { AND: [membresia, dondeHistorial(ahora)] },
+    canceladas: { AND: [membresia, { estado: 'CANCELADA' }] },
   }
 
   const [totalProximas, totalHistorial, totalCanceladas] = await Promise.all([
@@ -167,7 +185,12 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
               {/* Tarjetas de ancho acotado: no se estiran para llenar la fila */}
               <div className="grid grid-cols-[repeat(auto-fill,minmax(17rem,19rem))] gap-5">
                 {reservas.map((reserva) => (
-                  <TarjetaReserva key={reserva.id} reserva={reserva} ahora={ahora} />
+                  <TarjetaReserva
+                    key={reserva.id}
+                    reserva={reserva}
+                    ahora={ahora}
+                    jugadorId={jugadorId}
+                  />
                 ))}
               </div>
               {/* Con una sola página de tarjetas no hace falta el pie */}
@@ -215,6 +238,7 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
                       reserva={reserva}
                       ahora={ahora}
                       conDisputa={vista === 'historial'}
+                      jugadorId={jugadorId}
                     />
                   ))}
                 </TableBody>
@@ -234,22 +258,28 @@ function FilaReserva({
   reserva,
   ahora,
   conDisputa,
+  jugadorId,
 }: {
   reserva: Reserva
   ahora: { dia: string; hora: string }
   conDisputa: boolean
+  jugadorId: string
 }) {
   const dia = diaDeReserva(reserva.fecha)
-  const monto = montoDelHistorial(
-    {
-      estado: reserva.estado,
-      asistio: reserva.asistio,
-      precioTurno: reserva.precioTurno.toString(),
-      pago: reserva.pago && { ...reserva.pago, monto: reserva.pago.monto.toString() },
-    },
-    turnoYaPaso(dia, reserva.horaInicio),
-    'JUGADOR',
-  )
+  // Si está en la lista y no sos el creador, es porque te sumaste
+  const esParticipante = reserva.jugadorId !== jugadorId
+  const monto = esParticipante
+    ? montoParticipante(reserva.precioTurno.toString())
+    : montoDelHistorial(
+        {
+          estado: reserva.estado,
+          asistio: reserva.asistio,
+          precioTurno: reserva.precioTurno.toString(),
+          pago: reserva.pago && { ...reserva.pago, monto: reserva.pago.monto.toString() },
+        },
+        turnoYaPaso(dia, reserva.horaInicio),
+        'JUGADOR',
+      )
 
   return (
     <TableRow>
@@ -278,7 +308,8 @@ function FilaReserva({
       </TableCell>
       {conDisputa && (
         <TableCell className="px-3 pr-4 text-right">
-          {reserva.disputa ? (
+          {/* Las disputas son del dueño de la reserva, no del que se sumó */}
+          {esParticipante ? null : reserva.disputa ? (
             <EstadoDeDisputa disputa={reserva.disputa} vista="JUGADOR" />
           ) : (
             sePuedeDisputar(
@@ -302,34 +333,43 @@ function FilaReserva({
 function TarjetaReserva({
   reserva,
   ahora,
+  jugadorId,
 }: {
   reserva: Reserva
   ahora: { dia: string; hora: string }
+  jugadorId: string
 }) {
   const dia = diaDeReserva(reserva.fecha)
   const cancelada = reserva.estado === 'CANCELADA'
   const yaPaso = turnoYaPaso(dia, reserva.horaInicio)
-  const monto = montoDelHistorial(
-    {
-      estado: reserva.estado,
-      asistio: reserva.asistio,
-      precioTurno: reserva.precioTurno.toString(),
-      pago: reserva.pago && { ...reserva.pago, monto: reserva.pago.monto.toString() },
-    },
-    yaPaso,
-    'JUGADOR',
-  )
+  const activa = !cancelada && !yaPaso
+  // Si está en la lista y no sos el creador, es porque te sumaste
+  const esParticipante = reserva.jugadorId !== jugadorId
+  const monto = esParticipante
+    ? montoParticipante(reserva.precioTurno.toString())
+    : montoDelHistorial(
+        {
+          estado: reserva.estado,
+          asistio: reserva.asistio,
+          precioTurno: reserva.precioTurno.toString(),
+          pago: reserva.pago && { ...reserva.pago, monto: reserva.pago.monto.toString() },
+        },
+        yaPaso,
+        'JUGADOR',
+      )
   // Mismo cálculo que hace el endpoint de la seña: es solo para mostrar el
   // monto en el botón, el que se cobra lo calcula el server.
   const porcentajeSena =
     reserva.cancha.porcentajeSena ?? reserva.cancha.complejo.porcentajeSenaDefault
   const montoSena = ((Number(reserva.precioTurno) * porcentajeSena) / 100).toString()
 
-  const muestraPagar = reserva.estado === 'PENDIENTE' && !yaPaso
-  const muestraCancelar = !cancelada && !yaPaso
-  // Los jugadores se editan mientras la reserva sigue activa y el turno no pasó
-  const puedeEditarJugadores = !cancelada && !yaPaso
-  const notaJugadores = puedeEditarJugadores
+  // El que se sumó no paga seña ni cancela: solo puede salirse.
+  const muestraPagar = !esParticipante && reserva.estado === 'PENDIENTE' && !yaPaso
+  const muestraCancelar = !esParticipante && activa
+  const muestraSalir = esParticipante && activa
+  // Los jugadores los edita el creador mientras la reserva sigue activa
+  const puedeEditarJugadores = !esParticipante && activa
+  const notaJugadores = activa
     ? textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)
     : null
   const venceSena = venceLaSena(reserva.createdAt).toISOString()
@@ -428,6 +468,8 @@ function TarjetaReserva({
               )}
             </div>
           )}
+
+          {muestraSalir && <LeaveBookingButton className="mt-3" bookingId={reserva.id} />}
 
           {puedeEditarJugadores && (
             <PlayersEditDialog

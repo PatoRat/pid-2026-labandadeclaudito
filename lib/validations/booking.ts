@@ -20,3 +20,8 @@ export const markAttendanceSchema = z.object({
 export const editPlayersSchema = z.object({
   jugadores: z.number().int().min(1).nullable(),
 })
+
+// Sumarse a una reserva incompleta: cuántos jugadores aporta el que se une.
+export const joinBookingSchema = z.object({
+  jugadores: z.number().int().min(1),
+})
