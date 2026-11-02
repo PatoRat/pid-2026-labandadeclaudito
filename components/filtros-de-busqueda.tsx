@@ -19,9 +19,13 @@ import type { SearchCourtsFilters } from '@/lib/validations/court-search'
 export function FiltrosDeBusqueda({
   filtros,
   idPrefijo,
+  incompletas = false,
 }: {
   filtros: SearchCourtsFilters
   idPrefijo: string
+  // Si está activo el modo "ver reservas incompletas", se conserva al aplicar
+  // filtros (campo oculto) y al limpiar.
+  incompletas?: boolean
 }) {
   const router = useRouter()
   // Los filtros guardan su valor en useState/defaultValue, que solo se leen al
@@ -32,11 +36,13 @@ export function FiltrosDeBusqueda({
 
   function limpiarFiltros() {
     setVecesLimpiado(vecesLimpiado + 1)
-    router.push('/jugador/canchas')
+    router.push(`/jugador/canchas${incompletas ? '?incompletas=1' : ''}`)
   }
 
   return (
     <form key={`${JSON.stringify(filtros)}-${vecesLimpiado}`} method="get" className="space-y-8">
+      {/* El form es GET: este campo oculto mantiene el modo al aplicar filtros */}
+      {incompletas && <input type="hidden" name="incompletas" value="1" />}
       <section className="space-y-4">
         <h3 className="text-sm font-semibold">Ubicación</h3>
         <ZonaFilter idPrefijo={idPrefijo} zonaInicial={filtros.zona} />

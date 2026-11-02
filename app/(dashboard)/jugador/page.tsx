@@ -8,6 +8,7 @@ import { complejoVisible } from '@/lib/complejos'
 import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
+import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -15,6 +16,7 @@ import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { RefreshWhenDepositExpires } from '@/components/refresh-when-deposit-expires'
 import { FilaDeTurno } from '@/components/fila-de-turno'
 import { ProximoTurnoDestacado } from '@/components/proximo-turno-destacado'
+import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
 
 export default async function JugadorHomePage() {
   const session = await auth()
@@ -31,6 +33,7 @@ export default async function JugadorHomePage() {
     totalReservas,
     totalComplejos,
     reservasDelSabado,
+    partidosAbiertosTodos,
   ] = await Promise.all([
     db.reserva.findMany({
       where: {
@@ -61,7 +64,11 @@ export default async function JugadorHomePage() {
         NOT: pendientesVencidas(),
       },
     }),
+    getPartidosAbiertos(session.user.id),
   ])
+
+  // En el feed se muestran los primeros; el resto se ve en Buscar canchas
+  const partidosAbiertos = partidosAbiertosTodos.slice(0, 4)
 
   // El primero va destacado arriba; los otros dos, como tarjetas debajo.
   const [proximoTurno, ...otrosTurnos] = proximasReservas
@@ -190,6 +197,27 @@ export default async function JugadorHomePage() {
                   </div>
                 </>
               )}
+            </>
+          )}
+
+          {partidosAbiertos.length > 0 && (
+            <>
+              <div className="mt-7 mb-3.5 flex items-baseline justify-between px-1">
+                <h2 className="font-heading text-xl font-bold">Partidos que buscan jugadores</h2>
+                <Link
+                  href="/jugador/canchas?incompletas=1"
+                  className="text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+                >
+                  Ver todos
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                {partidosAbiertos.map((reserva) => (
+                  <TarjetaPartidoAbierto key={reserva.id} reserva={reserva} />
+                ))}
+              </div>
             </>
           )}
         </section>
