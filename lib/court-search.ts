@@ -256,23 +256,9 @@ export async function getComplexDetail(
   return { ...complejo, canchas: await courtsThatMatch(complejo.canchas, filtros, jugadorId) }
 }
 
-// Los filtros como texto para la URL (?deporte=PADEL&precioMax=30000), para
-// pasarlos de la búsqueda al detalle y de vuelta. Vacío si no hay ninguno.
-export function filtersToQueryString(filtros: SearchCourtsFilters): string {
-  const params = new URLSearchParams()
-
-  if (filtros.zona !== undefined) params.set('zona', filtros.zona)
-  if (filtros.deporte !== undefined) params.set('deporte', filtros.deporte)
-  if (filtros.tipoSuperficie !== undefined) params.set('tipoSuperficie', filtros.tipoSuperficie)
-  if (filtros.precioMin !== undefined) params.set('precioMin', String(filtros.precioMin))
-  if (filtros.precioMax !== undefined) params.set('precioMax', String(filtros.precioMax))
-  if (filtros.fecha !== undefined) params.set('fecha', filtros.fecha)
-  if (filtros.horaDesde !== undefined) params.set('horaDesde', filtros.horaDesde)
-  if (filtros.horaHasta !== undefined) params.set('horaHasta', filtros.horaHasta)
-
-  const texto = params.toString()
-  return texto === '' ? '' : `?${texto}`
-}
+// filtersToQueryString vive en court-search-url.ts (sin DB) y se reexporta acá
+// para no romper los imports que ya lo traen desde '@/lib/court-search'.
+export { filtersToQueryString } from '@/lib/court-search-url'
 
 // Un filtro aplicado como "chip" (ej: "Deporte: Pádel"). withoutIt son los
 // filtros que quedan al quitarlo: con eso la página arma el link de la "x".
