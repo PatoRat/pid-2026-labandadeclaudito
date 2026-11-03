@@ -18,6 +18,7 @@ import { VistaPreviaCancha } from '@/components/vista-previa-cancha'
 import type { Deporte, TipoSuperficie } from '@/lib/generated/prisma/client'
 import { createCourtSchema } from '@/lib/validations/court'
 import { deporteLabels, superficieLabels, superficiesPorDeporte } from '@/lib/labels'
+import { capacidadPorDeporte } from '@/lib/jugadores'
 import { generateSlots } from '@/lib/time'
 
 const duracionOpciones: Record<string, string> = {
@@ -36,6 +37,8 @@ export function CourtBatchForm({ complejoId }: { complejoId: string }) {
   const [horaApertura, setHoraApertura] = useState('08:00')
   const [horaCierre, setHoraCierre] = useState('23:00')
   const [duracionTurnoMin, setDuracionTurnoMin] = useState('60')
+  // String para poder borrar y escribir libre; se precarga según el deporte
+  const [capacidad, setCapacidad] = useState(String(capacidadPorDeporte.FUTBOL_5))
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
@@ -58,6 +61,7 @@ export function CourtBatchForm({ complejoId }: { complejoId: string }) {
       horaApertura,
       horaCierre,
       duracionTurnoMin,
+      capacidad,
     }
 
     const parsed = createCourtSchema.safeParse(datos)
@@ -94,6 +98,7 @@ export function CourtBatchForm({ complejoId }: { complejoId: string }) {
                 onValueChange={(v) => {
                   const nuevoDeporte = v as typeof deporte
                   setDeporte(nuevoDeporte)
+                  setCapacidad(String(capacidadPorDeporte[nuevoDeporte]))
                   // Si la superficie elegida no tiene sentido para el nuevo deporte,
                   // se pasa a la primera que sí (ej: fútbol nunca en polvo de ladrillo)
                   if (!superficiesPorDeporte[nuevoDeporte].includes(tipoSuperficie)) {
@@ -163,7 +168,7 @@ export function CourtBatchForm({ complejoId }: { complejoId: string }) {
               </p>
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="precioBase">Precio base por turno ($ ARS)</Label>
               <Input
                 id="precioBase"
@@ -172,6 +177,21 @@ export function CourtBatchForm({ complejoId }: { complejoId: string }) {
                 step="0.01"
                 placeholder="24000"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="capacidad">Capacidad (jugadores)</Label>
+              <Input
+                id="capacidad"
+                type="number"
+                min={2}
+                max={30}
+                value={capacidad}
+                onChange={(e) => setCapacidad(e.target.value)}
+              />
+              <p className="text-muted-foreground text-sm">
+                Hasta cuántos pueden jugar, sumando los dos equipos.
+              </p>
             </div>
           </div>
         </div>

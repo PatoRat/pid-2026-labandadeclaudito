@@ -372,7 +372,7 @@ function TarjetaReserva({
   // Los jugadores los edita el creador mientras la reserva sigue activa
   const puedeEditarJugadores = !esParticipante && activa
   const notaJugadores = activa
-    ? textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)
+    ? textoJugadoresFaltantes(reserva.cancha.capacidad, reserva.jugadores)
     : null
   const venceSena = venceLaSena(reserva.createdAt).toISOString()
 
@@ -477,7 +477,7 @@ function TarjetaReserva({
             <PlayersEditDialog
               className="mt-2 w-full"
               bookingId={reserva.id}
-              deporte={reserva.cancha.deporte}
+              capacidad={reserva.cancha.capacidad}
               jugadores={reserva.jugadores}
             />
           )}

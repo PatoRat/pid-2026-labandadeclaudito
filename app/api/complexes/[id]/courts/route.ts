@@ -29,7 +29,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       data: {
         ...datosComunes,
         nombre: `${nombrePrefijo} ${i}`,
-        capacidad: 0,
         complejoId,
       },
     })

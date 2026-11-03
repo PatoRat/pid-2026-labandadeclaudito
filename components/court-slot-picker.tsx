@@ -15,7 +15,6 @@ import {
   Sunset,
   Wallet,
 } from 'lucide-react'
-import type { Deporte } from '@/lib/generated/prisma/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,12 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MINUTOS_PARA_PAGAR_SENA, venceLaSena } from '@/lib/estado-reserva'
 import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { diaEnPalabras } from '@/lib/fechas'
-import {
-  jugadoresFaltantes,
-  maxJugadoresPorDeporte,
-  textoCupo,
-  textoJugadoresFaltantes,
-} from '@/lib/jugadores'
+import { jugadoresFaltantes, textoCupo, textoJugadoresFaltantes } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
 import { montoDelDescuento, type Nivel } from '@/lib/gamificacion'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
@@ -62,20 +56,21 @@ const periodosDelDia = [
 export function CourtSlotPicker({
   courtId,
   courtName,
-  deporte,
+  capacidad,
   precioBase,
   fechaInicial,
   nivel,
 }: {
   courtId: string
   courtName: string
-  deporte: Deporte
+  // Máximo de jugadores de la cancha (Cancha.capacidad)
+  capacidad: number
   precioBase: string
   fechaInicial?: string
   // Nivel del jugador: su % de descuento se muestra en el desglose
   nivel: Nivel
 }) {
-  const maxJugadores = maxJugadoresPorDeporte[deporte]
+  const maxJugadores = capacidad
   // fechaInicial viene como YYYY-MM-DD de la búsqueda. Se arma con parse (fecha
   // local): new Date('2026-10-03') sería medianoche UTC y en Argentina mostraría
   // el día anterior. Una fecha que ya pasó no sirve, se arranca en hoy.
@@ -278,7 +273,7 @@ export function CourtSlotPicker({
 
   // Cuánto se suma el que se une, acotado a lo que falta del turno elegido.
   function cantidadParaUnirse() {
-    const faltan = slotSeleccionado ? jugadoresFaltantes(deporte, slotSeleccionado.jugadores) : 1
+    const faltan = slotSeleccionado ? jugadoresFaltantes(capacidad, slotSeleccionado.jugadores) : 1
     const n = parseInt(cantidadTexto, 10)
     if (Number.isNaN(n) || n < 1) return 1
     if (n > faltan) return faltan
@@ -372,7 +367,7 @@ export function CourtSlotPicker({
         )}
         {slot.reservada && (
           <span className="text-[10px] leading-none font-normal opacity-80">
-            {textoCupo(deporte, slot.jugadores)}
+            {textoCupo(capacidad, slot.jugadores)}
           </span>
         )}
       </button>
@@ -566,7 +561,7 @@ export function CourtSlotPicker({
                       onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
                     />
                     <p className="text-muted-foreground text-sm">
-                      {textoJugadoresFaltantes(deporte, cantidadParaMandar()) ??
+                      {textoJugadoresFaltantes(capacidad, cantidadParaMandar()) ??
                         `Con ${maxJugadores} jugadores queda completa.`}
                     </p>
                   </div>
@@ -599,15 +594,15 @@ export function CourtSlotPicker({
                   id="cantidadParaUnirse"
                   type="number"
                   min={1}
-                  max={jugadoresFaltantes(deporte, slotSeleccionado.jugadores)}
+                  max={jugadoresFaltantes(capacidad, slotSeleccionado.jugadores)}
                   value={cantidadTexto}
                   // Se escribe libre; se acota a 1..lo que falta al salir del campo
                   onChange={(e) => setCantidadTexto(e.target.value)}
                   onBlur={() => setCantidadTexto(String(cantidadParaUnirse()))}
                 />
                 <p className="text-muted-foreground text-sm">
-                  {textoJugadoresFaltantes(deporte, slotSeleccionado.jugadores)} (
-                  {textoCupo(deporte, slotSeleccionado.jugadores)})
+                  {textoJugadoresFaltantes(capacidad, slotSeleccionado.jugadores)} (
+                  {textoCupo(capacidad, slotSeleccionado.jugadores)})
                 </p>
               </div>
               <Button size="lg" onClick={unirse} disabled={estado === 'uniendo'}>

@@ -142,7 +142,10 @@ export default async function JugadorHomePage() {
                 cancha={proximoTurno.cancha.nombre}
                 deporte={proximoTurno.cancha.deporte}
                 lugar={`${proximoTurno.cancha.complejo.nombre} · ${proximoTurno.cancha.complejo.zona}`}
-                nota={textoJugadoresFaltantes(proximoTurno.cancha.deporte, proximoTurno.jugadores)}
+                nota={textoJugadoresFaltantes(
+                  proximoTurno.cancha.capacidad,
+                  proximoTurno.jugadores,
+                )}
               >
                 {/* Pendiente de seña: la cuenta regresiva va sobre fondo
                     claro, porque sus colores no se leen sobre el verde */}
@@ -194,7 +197,7 @@ export default async function JugadorHomePage() {
                         horaFin={reserva.horaFin}
                         deporte={reserva.cancha.deporte}
                         detalle={`${reserva.cancha.nombre} · ${reserva.cancha.complejo.nombre}, ${reserva.cancha.complejo.zona}`}
-                        nota={textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)}
+                        nota={textoJugadoresFaltantes(reserva.cancha.capacidad, reserva.jugadores)}
                       >
                         <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
                           <ArrowRight className="size-4" />

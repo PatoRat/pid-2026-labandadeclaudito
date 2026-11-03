@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users } from 'lucide-react'
-import type { Deporte } from '@/lib/generated/prisma/client'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,23 +18,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { maxJugadoresPorDeporte, textoJugadoresFaltantes } from '@/lib/jugadores'
+import { textoJugadoresFaltantes } from '@/lib/jugadores'
 
 // Editar los jugadores de una reserva ya hecha: marcarla completa o cargar
 // cuántos hay. La seña no cambia.
 export function PlayersEditDialog({
   bookingId,
-  deporte,
+  capacidad,
   jugadores,
   className,
 }: {
   bookingId: string
-  deporte: Deporte
+  // Máximo de jugadores de la cancha (Cancha.capacidad)
+  capacidad: number
   jugadores: number | null
   className?: string
 }) {
   const router = useRouter()
-  const maxJugadores = maxJugadoresPorDeporte[deporte]
+  const maxJugadores = capacidad
 
   const [abierto, setAbierto] = useState(false)
   const [completa, setCompleta] = useState(jugadores === null)
@@ -120,7 +120,7 @@ export function PlayersEditDialog({
                 onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
               />
               <p className="text-muted-foreground text-sm">
-                {textoJugadoresFaltantes(deporte, cantidadParaMandar()) ??
+                {textoJugadoresFaltantes(capacidad, cantidadParaMandar()) ??
                   `Con ${maxJugadores} jugadores queda completa.`}
               </p>
             </div>

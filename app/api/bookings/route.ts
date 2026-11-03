@@ -112,9 +112,17 @@ export async function POST(request: Request) {
   }
 
   // Un jugador no puede estar en dos canchas a la vez: se busca otra reserva
-  // suya ese mismo día cuyo horario se cruce con el turno pedido.
+  // ese mismo día (suya o a la que se sumó) cuyo horario se cruce con el turno
+  // pedido.
   const reservasDelJugador = await db.reserva.findMany({
-    where: { jugadorId: session.user.id, fecha, estado: { not: 'CANCELADA' } },
+    where: {
+      OR: [
+        { jugadorId: session.user.id },
+        { participantes: { some: { jugadorId: session.user.id } } },
+      ],
+      fecha,
+      estado: { not: 'CANCELADA' },
+    },
   })
   for (const otraReserva of reservasDelJugador) {
     if (
@@ -179,7 +187,7 @@ export async function POST(request: Request) {
   const jugadores =
     parsed.data.jugadores === undefined
       ? null
-      : normalizarJugadores(cancha.deporte, parsed.data.jugadores)
+      : normalizarJugadores(cancha.capacidad, parsed.data.jugadores)
 
   // La reserva nace PENDIENTE (de seña): pasa a CONFIRMADA recién cuando el
   // jugador paga la seña en POST /api/bookings/[id]/deposit.

@@ -86,6 +86,7 @@ export function CourtCard({
             courtId={cancha.id}
             courtName={cancha.nombre}
             deporte={cancha.deporte}
+            capacidad={cancha.capacidad}
             precioBase={cancha.precioBase.toString()}
             duracionTurnoMin={cancha.duracionTurnoMin}
             fechaInicial={cancha.bloqueadaTodoElDia ? undefined : fechaInicial}

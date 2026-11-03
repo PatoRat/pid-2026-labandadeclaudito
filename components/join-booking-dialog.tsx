@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserPlus } from 'lucide-react'
-import type { Deporte } from '@/lib/generated/prisma/client'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,17 +23,18 @@ import { jugadoresFaltantes, textoCupo } from '@/lib/jugadores'
 // Se elige cuántos jugadores se aportan (como en el selector de turnos).
 export function JoinBookingDialog({
   bookingId,
-  deporte,
+  capacidad,
   jugadores,
   className,
 }: {
   bookingId: string
-  deporte: Deporte
+  // Máximo de jugadores de la cancha (Cancha.capacidad)
+  capacidad: number
   jugadores: number | null
   className?: string
 }) {
   const router = useRouter()
-  const faltan = jugadoresFaltantes(deporte, jugadores)
+  const faltan = jugadoresFaltantes(capacidad, jugadores)
 
   const [abierto, setAbierto] = useState(false)
   // String para poder borrar y escribir libre; se acota al salir del campo.
@@ -101,7 +101,7 @@ export function JoinBookingDialog({
             onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
           />
           <p className="text-muted-foreground text-sm">
-            Faltan {faltan} para completar ({textoCupo(deporte, jugadores)}).
+            Faltan {faltan} para completar ({textoCupo(capacidad, jugadores)}).
           </p>
           {error && <p className="text-destructive text-sm">{error}</p>}
         </div>

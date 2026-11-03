@@ -143,11 +143,16 @@ export async function getAvailableSlots(
     }),
     getBlocksOfDay(canchaId, fecha),
     // Si mira un jugador, también se marcan ocupados los turnos que se cruzan
-    // con otra reserva suya (en cualquier cancha): no puede estar en dos
-    // lados a la vez. POST /api/bookings hace el mismo chequeo.
+    // con otra reserva suya o a la que se sumó (en cualquier cancha): no puede
+    // estar en dos lados a la vez. POST /api/bookings hace el mismo chequeo.
     jugadorId
       ? db.reserva.findMany({
-          where: { jugadorId, fecha, estado: { not: 'CANCELADA' }, NOT: pendientesVencidas() },
+          where: {
+            OR: [{ jugadorId }, { participantes: { some: { jugadorId } } }],
+            fecha,
+            estado: { not: 'CANCELADA' },
+            NOT: pendientesVencidas(),
+          },
           select: { horaInicio: true, horaFin: true },
         })
       : [],
@@ -184,7 +189,7 @@ export async function getAvailableSlots(
     const puedeUnirse =
       reservaDelTurno !== undefined &&
       jugadorId !== undefined &&
-      esIncompleta(cancha.deporte, reservaDelTurno.jugadores) &&
+      esIncompleta(cancha.capacidad, reservaDelTurno.jugadores) &&
       reservaDelTurno.jugadorId !== jugadorId &&
       !reservaDelTurno.participantes.some((p) => p.jugadorId === jugadorId) &&
       !seCruzaConReservaDelJugador &&

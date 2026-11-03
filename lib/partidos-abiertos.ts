@@ -57,7 +57,7 @@ export async function getPartidosAbiertos(jugadorId: string, filtros?: SearchCou
   // se descartan los turnos que ya empezaron.
   const abiertos = reservas.filter(
     (reserva) =>
-      esIncompleta(reserva.cancha.deporte, reserva.jugadores) &&
+      esIncompleta(reserva.cancha.capacidad, reserva.jugadores) &&
       !turnoYaPaso(diaDeReserva(reserva.fecha), reserva.horaInicio),
   )
 

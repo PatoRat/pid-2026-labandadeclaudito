@@ -247,6 +247,7 @@ describe('Canchas del complejo', () => {
       horaApertura: '09:00',
       horaCierre: '13:00',
       duracionTurnoMin: 60,
+      capacidad: 14,
       porcentajeSena: null,
       minAdvanceMinutes: null,
     }
@@ -323,6 +324,7 @@ describe('Franjas dentro del horario de la cancha', () => {
         horaApertura: '08:00',
         horaCierre: '11:00',
         duracionTurnoMin: 60,
+        capacidad: 10,
         porcentajeSena: null,
         minAdvanceMinutes: null,
       }),

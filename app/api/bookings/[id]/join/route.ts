@@ -43,14 +43,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (reserva.participantes.some((p) => p.jugadorId === session.user.id)) {
     return NextResponse.json({ error: 'Ya te sumaste a esta reserva' }, { status: 409 })
   }
-  if (!esIncompleta(reserva.cancha.deporte, reserva.jugadores)) {
+  if (!esIncompleta(reserva.cancha.capacidad, reserva.jugadores)) {
     return NextResponse.json({ error: 'La reserva ya está completa' }, { status: 409 })
   }
 
-  // No se puede estar en dos canchas a la vez: se busca otra reserva propia ese
-  // día cuyo horario se cruce con este turno (mismo chequeo que al reservar).
+  // No se puede estar en dos canchas a la vez: se busca otra reserva ese día
+  // (propia o a la que ya se sumó) cuyo horario se cruce con este turno (mismo
+  // chequeo que al reservar).
   const reservasDelJugador = await db.reserva.findMany({
-    where: { jugadorId: session.user.id, fecha: reserva.fecha, estado: { not: 'CANCELADA' } },
+    where: {
+      OR: [
+        { jugadorId: session.user.id },
+        { participantes: { some: { jugadorId: session.user.id } } },
+      ],
+      fecha: reserva.fecha,
+      estado: { not: 'CANCELADA' },
+    },
   })
   for (const otra of reservasDelJugador) {
     if (horariosSeSuperponen(reserva.horaInicio, reserva.horaFin, otra.horaInicio, otra.horaFin)) {
@@ -64,25 +72,41 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Lo que realmente aporta puede ser menos que lo pedido si no entra tanto. Se
   // guarda el aporte en el participante para poder restarlo exacto si se sale.
   const nuevoTotal = sumarJugadores(
-    reserva.cancha.deporte,
+    reserva.cancha.capacidad,
     reserva.jugadores,
     parsed.data.jugadores,
   )
   const aporte = nuevoTotal - (reserva.jugadores ?? 0)
 
+  // Si otro se sumó entre que se leyó la reserva y ahora, el total ya no es el
+  // que se leyó: se actualiza solo si sigue igual, así no se pisa su aporte ni
+  // se pasa del máximo.
+  let sumado: boolean
   try {
-    await db.$transaction([
-      db.participanteReserva.create({
+    sumado = await db.$transaction(async (tx) => {
+      const actualizadas = await tx.reserva.updateMany({
+        where: { id, jugadores: reserva.jugadores },
+        data: { jugadores: nuevoTotal },
+      })
+      if (actualizadas.count === 0) return false
+
+      await tx.participanteReserva.create({
         data: { reservaId: id, jugadorId: session.user.id, jugadores: aporte },
-      }),
-      db.reserva.update({ where: { id }, data: { jugadores: nuevoTotal } }),
-    ])
+      })
+      return true
+    })
   } catch (e) {
     // Dos pedidos del mismo jugador a la vez: el índice único lo corta.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
       return NextResponse.json({ error: 'Ya te sumaste a esta reserva' }, { status: 409 })
     }
     throw e
+  }
+  if (!sumado) {
+    return NextResponse.json(
+      { error: 'Alguien se sumó mientras tanto. Recargá la página.' },
+      { status: 409 },
+    )
   }
 
   return NextResponse.json({ ok: true }, { status: 200 })

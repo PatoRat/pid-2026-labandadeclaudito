@@ -108,6 +108,7 @@ export const datosDeCanchas = {
   horaApertura: '08:00',
   horaCierre: '12:00',
   duracionTurnoMin: 60,
+  capacidad: 10,
 }
 
 // Crea directo en la DB un complejo con 2 canchas (08 a 12 hs, turnos de 1 hora)
@@ -123,7 +124,7 @@ export async function crearComplejoConCanchas(duenioId: string) {
       nombre: 'Cancha 1',
       deporte: 'FUTBOL_5',
       tipoSuperficie: 'CESPED_SINTETICO',
-      capacidad: 0,
+      capacidad: 10,
       precioBase: 10000,
       horaApertura: '08:00',
       horaCierre: '12:00',
@@ -136,7 +137,7 @@ export async function crearComplejoConCanchas(duenioId: string) {
       nombre: 'Cancha 2',
       deporte: 'FUTBOL_7',
       tipoSuperficie: 'CEMENTO',
-      capacidad: 0,
+      capacidad: 14,
       precioBase: 15000,
       horaApertura: '08:00',
       horaCierre: '12:00',

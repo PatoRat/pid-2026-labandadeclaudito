@@ -24,7 +24,7 @@ export function TarjetaPartidoAbierto({ reserva }: { reserva: PartidoAbierto }) 
         <div className="flex flex-wrap items-center gap-1.5">
           <EtiquetaDeporte deporte={deporte} />
           <span className="bg-highlight text-highlight-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
-            {textoCupo(deporte, reserva.jugadores)}
+            {textoCupo(reserva.cancha.capacidad, reserva.jugadores)}
           </span>
         </div>
 
@@ -42,7 +42,7 @@ export function TarjetaPartidoAbierto({ reserva }: { reserva: PartidoAbierto }) 
           {reserva.cancha.complejo.nombre} · {reserva.cancha.complejo.direccion}
         </p>
         <p className="text-muted-foreground mt-1 text-sm">
-          {textoJugadoresFaltantes(deporte, reserva.jugadores)}
+          {textoJugadoresFaltantes(reserva.cancha.capacidad, reserva.jugadores)}
         </p>
 
         <div className="mt-auto pt-3.5">
@@ -53,7 +53,7 @@ export function TarjetaPartidoAbierto({ reserva }: { reserva: PartidoAbierto }) 
           <JoinBookingDialog
             className="mt-3 w-full"
             bookingId={reserva.id}
-            deporte={deporte}
+            capacidad={reserva.cancha.capacidad}
             jugadores={reserva.jugadores}
           />
         </div>

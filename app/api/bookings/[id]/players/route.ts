@@ -36,7 +36,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'El turno ya empezó' }, { status: 400 })
   }
 
-  const jugadores = normalizarJugadores(reserva.cancha.deporte, parsed.data.jugadores)
+  const jugadores = normalizarJugadores(reserva.cancha.capacidad, parsed.data.jugadores)
   await db.reserva.update({ where: { id }, data: { jugadores } })
 
   return NextResponse.json({ ok: true }, { status: 200 })

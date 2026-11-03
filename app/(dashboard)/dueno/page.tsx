@@ -110,7 +110,10 @@ export default async function DuenoHomePage() {
                 cancha={proximoTurno.cancha.nombre}
                 deporte={proximoTurno.cancha.deporte}
                 lugar={`${proximoTurno.cancha.complejo.nombre} · ${proximoTurno.cancha.complejo.zona}`}
-                nota={textoJugadoresFaltantes(proximoTurno.cancha.deporte, proximoTurno.jugadores)}
+                nota={textoJugadoresFaltantes(
+                  proximoTurno.cancha.capacidad,
+                  proximoTurno.jugadores,
+                )}
               >
                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
                   <p className="flex items-center gap-2.5">
@@ -152,7 +155,7 @@ export default async function DuenoHomePage() {
                         horaFin={reserva.horaFin}
                         deporte={reserva.cancha.deporte}
                         detalle={`${reserva.cancha.nombre} · ${reserva.cancha.complejo.nombre}`}
-                        nota={textoJugadoresFaltantes(reserva.cancha.deporte, reserva.jugadores)}
+                        nota={textoJugadoresFaltantes(reserva.cancha.capacidad, reserva.jugadores)}
                       >
                         <QuienReservo nombre={reserva.jugador.nombre} />
                       </FilaDeTurno>

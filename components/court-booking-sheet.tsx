@@ -21,6 +21,7 @@ export function CourtBookingSheet({
   courtId,
   courtName,
   deporte,
+  capacidad,
   precioBase,
   duracionTurnoMin,
   fechaInicial,
@@ -31,6 +32,7 @@ export function CourtBookingSheet({
   courtId: string
   courtName: string
   deporte: Deporte
+  capacidad: number
   precioBase: string
   duracionTurnoMin: number
   fechaInicial?: string
@@ -81,7 +83,7 @@ export function CourtBookingSheet({
           <CourtSlotPicker
             courtId={courtId}
             courtName={courtName}
-            deporte={deporte}
+            capacidad={capacidad}
             precioBase={precioBase}
             fechaInicial={fechaInicial}
             nivel={nivel}

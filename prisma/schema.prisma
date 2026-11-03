@@ -131,6 +131,7 @@ model Cancha {
   nombre            String
   deporte           Deporte
   tipoSuperficie    TipoSuperficie
+  // Máximo de jugadores por reserva (ambos equipos): hasta acá se pueden sumar
   capacidad         Int
   precioBase        Decimal        @db.Decimal(10, 2)
   horaApertura      String
