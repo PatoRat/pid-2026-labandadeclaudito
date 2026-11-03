@@ -20,6 +20,7 @@ import { VistaPreviaCancha } from '@/components/vista-previa-cancha'
 import { timeTextToMinutes } from '@/lib/time'
 import { updateCourtSchema } from '@/lib/validations/court'
 import { deporteLabels, superficieLabels, superficiesPorDeporte } from '@/lib/labels'
+import { capacidadPorDeporte } from '@/lib/jugadores'
 import type { Cancha } from '@/lib/generated/prisma/client'
 
 type CanchaConPrecioString = Omit<Cancha, 'precioBase'> & { precioBase: string }
@@ -36,6 +37,8 @@ export function CourtEditForm({
   const [tipoSuperficie, setTipoSuperficie] = useState(cancha.tipoSuperficie)
   const [horaApertura, setHoraApertura] = useState(cancha.horaApertura)
   const [horaCierre, setHoraCierre] = useState(cancha.horaCierre)
+  // String para poder borrar y escribir libre
+  const [capacidad, setCapacidad] = useState(String(cancha.capacidad))
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [cargando, setCargando] = useState(false)
@@ -56,6 +59,7 @@ export function CourtEditForm({
       horaApertura,
       horaCierre,
       duracionTurnoMin: form.get('duracionTurnoMin'),
+      capacidad,
       // Campo vacío = usar el % de seña por defecto del complejo, no uno propio
       porcentajeSena: porcentajeSenaTexto === '' ? null : Number(porcentajeSenaTexto),
       // Campo vacío = usar la anticipación mínima por defecto del complejo
@@ -142,6 +146,7 @@ export function CourtEditForm({
                 onValueChange={(v) => {
                   const nuevoDeporte = v as typeof deporte
                   setDeporte(nuevoDeporte)
+                  setCapacidad(String(capacidadPorDeporte[nuevoDeporte]))
                   // Si la superficie elegida no tiene sentido para el nuevo deporte,
                   // se pasa a la primera que sí (ej: fútbol nunca en polvo de ladrillo)
                   if (!superficiesPorDeporte[nuevoDeporte].includes(tipoSuperficie)) {
@@ -206,6 +211,35 @@ export function CourtEditForm({
                 <p className="text-destructive flex items-center gap-1 text-xs font-medium">
                   <AlertCircle className="size-3.5" />
                   {fieldErrors.precioBase}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="capacidad"
+                className={fieldErrors.capacidad ? 'text-destructive font-semibold' : undefined}
+              >
+                Capacidad (jugadores) {fieldErrors.capacidad && '*'}
+              </Label>
+              <Input
+                id="capacidad"
+                type="number"
+                min={2}
+                max={30}
+                value={capacidad}
+                onChange={(e) => setCapacidad(e.target.value)}
+                aria-invalid={!!fieldErrors.capacidad}
+                className={
+                  fieldErrors.capacidad
+                    ? 'border-destructive ring-destructive/20 ring-3'
+                    : undefined
+                }
+              />
+              {fieldErrors.capacidad && (
+                <p className="text-destructive flex items-center gap-1 text-xs font-medium">
+                  <AlertCircle className="size-3.5" />
+                  {fieldErrors.capacidad}
                 </p>
               )}
             </div>

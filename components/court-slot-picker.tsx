@@ -16,16 +16,35 @@ import {
   Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MINUTOS_PARA_PAGAR_SENA, venceLaSena } from '@/lib/estado-reserva'
 import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { diaEnPalabras } from '@/lib/fechas'
+import { jugadoresFaltantes, textoCupo, textoJugadoresFaltantes } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
+import { montoDelDescuento, type Nivel } from '@/lib/gamificacion'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
 
-type Slot = { horaInicio: string; horaFin: string; disponible: boolean; precio: string }
+type Slot = {
+  horaInicio: string
+  horaFin: string
+  disponible: boolean
+  // reservada: la tomó otra reserva; jugadores: cuántos cargó (null = completa)
+  reservada: boolean
+  jugadores: number | null
+  // reservaId: id de la reserva que ocupa el turno; puedeUnirse: el que mira
+  // puede sumarse a esa reserva incompleta
+  reservaId: string | null
+  puedeUnirse: boolean
+  precio: string
+}
 // reservando -> pendiente (reserva creada, falta la seña) -> pagando -> exito
-type EstadoConfirmacion = 'idle' | 'reservando' | 'pendiente' | 'pagando' | 'exito' | 'error'
+// uniendo -> unido: sumarse a una reserva incompleta de otro jugador
+type EstadoConfirmacion =
+  'idle' | 'reservando' | 'pendiente' | 'pagando' | 'exito' | 'uniendo' | 'unido' | 'error'
 
 // Los horarios se agrupan por momento del día ("desde" incluido, "hasta" no)
 const periodosDelDia = [
@@ -37,14 +56,21 @@ const periodosDelDia = [
 export function CourtSlotPicker({
   courtId,
   courtName,
+  capacidad,
   precioBase,
   fechaInicial,
+  nivel,
 }: {
   courtId: string
   courtName: string
+  // Máximo de jugadores de la cancha (Cancha.capacidad)
+  capacidad: number
   precioBase: string
   fechaInicial?: string
+  // Nivel del jugador: su % de descuento se muestra en el desglose
+  nivel: Nivel
 }) {
+  const maxJugadores = capacidad
   // fechaInicial viene como YYYY-MM-DD de la búsqueda. Se arma con parse (fecha
   // local): new Date('2026-10-03') sería medianoche UTC y en Argentina mostraría
   // el día anterior. Una fecha que ya pasó no sirve, se arranca en hoy.
@@ -59,6 +85,11 @@ export function CourtSlotPicker({
   const [porcentajeSena, setPorcentajeSena] = useState(0)
   const [minAdvanceMinutes, setMinAdvanceMinutes] = useState(0)
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
+  // Si el turno se reserva completo (default) o falta gente; cuántos hay.
+  // La cantidad es string para poder borrarla y escribir libre: se normaliza
+  // (acota a 1..máximo) recién al salir del campo (onBlur).
+  const [completa, setCompleta] = useState(true)
+  const [cantidadTexto, setCantidadTexto] = useState('1')
   const [estado, setEstado] = useState<EstadoConfirmacion>('idle')
   const [mensajeError, setMensajeError] = useState('')
   const [reservaHecha, setReservaHecha] = useState<{
@@ -162,11 +193,26 @@ export function CourtSlotPicker({
   }, [reservaHecha, estado, fecha, courtId])
 
   const slotSeleccionado = slots.find((slot) => slot.horaInicio === horaSeleccionada)
-  // El turno elegido lo reservó otro jugador mientras lo miraba (lo trajo la grilla en vivo)
-  const turnoElegidoSeOcupo = slotSeleccionado !== undefined && !slotSeleccionado.disponible
+  // El turno elegido dejó de estar disponible y tampoco se puede sumar: lo tomó
+  // otro mientras lo miraba, o se completó (lo trajo la grilla en vivo)
+  const turnoElegidoSeOcupo =
+    slotSeleccionado !== undefined && !slotSeleccionado.disponible && !slotSeleccionado.puedeUnirse
   const montoSenaSeleccionada = slotSeleccionado
     ? (Number(slotSeleccionado.precio) * porcentajeSena) / 100
     : 0
+  // Misma cuenta que hace el server al crear la reserva
+  const descuentoSeleccionado = slotSeleccionado
+    ? montoDelDescuento(Number(slotSeleccionado.precio), nivel.descuento, porcentajeSena)
+    : 0
+
+  // Normaliza el texto del input a un entero válido (1..máximo) para mandarlo.
+  // El server igual re-normaliza.
+  function cantidadParaMandar() {
+    const n = parseInt(cantidadTexto, 10)
+    if (Number.isNaN(n) || n < 1) return 1
+    if (n > maxJugadores) return maxJugadores
+    return n
+  }
 
   // Paso 1: la reserva se crea PENDIENTE (de seña). El turno ya queda tomado.
   async function reservar() {
@@ -181,6 +227,8 @@ export function CourtSlotPicker({
         canchaId: courtId,
         fecha: format(fecha, 'yyyy-MM-dd'),
         horaInicio: horaSeleccionada,
+        // Completa = no se manda; incompleta = cuántos jugadores hay
+        jugadores: completa ? undefined : cantidadParaMandar(),
       }),
     })
     const json = await res.json()
@@ -223,6 +271,38 @@ export function CourtSlotPicker({
     setEstado('error')
   }
 
+  // Cuánto se suma el que se une, acotado a lo que falta del turno elegido.
+  function cantidadParaUnirse() {
+    const faltan = slotSeleccionado ? jugadoresFaltantes(capacidad, slotSeleccionado.jugadores) : 1
+    const n = parseInt(cantidadTexto, 10)
+    if (Number.isNaN(n) || n < 1) return 1
+    if (n > faltan) return faltan
+    return n
+  }
+
+  // Sumarse a una reserva incompleta de otro jugador. No se paga nada.
+  async function unirse() {
+    if (!slotSeleccionado || !slotSeleccionado.reservaId) return
+    setMensajeError('')
+    setEstado('uniendo')
+
+    const res = await fetch(`/api/bookings/${slotSeleccionado.reservaId}/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jugadores: cantidadParaUnirse() }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      setHoraSeleccionada(null)
+      setEstado('unido')
+      await cargarDisponibilidad(fecha)
+      return
+    }
+    setMensajeError(json.error)
+    setEstado('error')
+    await cargarDisponibilidad(fecha)
+  }
+
   // Tira de días: todos los que se pueden reservar (hoy + 30)
   const dias = diasParaReservar()
   const diaElegido = format(fecha, 'yyyy-MM-dd')
@@ -233,6 +313,8 @@ export function CourtSlotPicker({
     setHoraSeleccionada(null)
     setEstado('idle')
     setReservaHecha(null)
+    setCompleta(true)
+    setCantidadTexto('1')
   }
 
   // El pie (fijo abajo del sheet) aparece cuando hay algo para hacer o avisar
@@ -240,16 +322,19 @@ export function CourtSlotPicker({
     turnoElegidoSeOcupo ||
     (horaSeleccionada !== null && slotSeleccionado !== undefined) ||
     reservaHecha !== null ||
+    estado === 'unido' ||
     (estado === 'error' && mensajeError !== '')
 
   function botonDeTurno(slot: Slot) {
     const seleccionado = slot.horaInicio === horaSeleccionada
     const esPrecioEspecial = slot.precio !== precioBase
+    // Un turno sin lugar: ni libre ni para sumarse. Va tachado y deshabilitado.
+    const sinLugar = !slot.disponible && !slot.puedeUnirse
     return (
       <button
         key={slot.horaInicio}
         type="button"
-        disabled={!slot.disponible}
+        disabled={sinLugar}
         onClick={() => {
           // Si la reserva anterior ya quedó pagada, se olvida: si no,
           // volvería a aparecer su "Pagar seña" con la cuenta regresiva.
@@ -258,19 +343,31 @@ export function CourtSlotPicker({
           setHoraSeleccionada(slot.horaInicio)
           setEstado('idle')
           setMensajeError('')
+          setCompleta(true)
+          setCantidadTexto('1')
         }}
         className={
-          !slot.disponible
-            ? 'bg-muted text-muted-foreground flex h-11 cursor-not-allowed flex-col items-center justify-center rounded-xl text-sm font-medium line-through opacity-60'
+          sinLugar
+            ? 'bg-muted text-muted-foreground flex min-h-11 cursor-not-allowed flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-medium opacity-60'
             : seleccionado
-              ? 'bg-primary text-primary-foreground shadow-button flex h-11 flex-col items-center justify-center rounded-xl text-sm font-bold'
-              : 'bg-card text-card-foreground shadow-soft hover:bg-accent hover:text-accent-foreground flex h-11 flex-col items-center justify-center rounded-xl text-sm font-semibold transition-colors'
+              ? 'bg-primary text-primary-foreground shadow-button flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-bold'
+              : slot.puedeUnirse
+                ? 'bg-clay/12 text-clay-foreground shadow-soft hover:bg-clay/20 flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-semibold transition-colors'
+                : 'bg-card text-card-foreground shadow-soft hover:bg-accent hover:text-accent-foreground flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl py-1 text-sm font-semibold transition-colors'
         }
       >
-        {slot.horaInicio}
-        {esPrecioEspecial && slot.disponible && (
+        {/* En un turno sin lugar la hora va tachada; si se puede sumar, no. El
+            precio y el cupo se leen igual, por eso el line-through va solo en la
+            hora. */}
+        <span className={sinLugar ? 'line-through' : undefined}>{slot.horaInicio}</span>
+        {esPrecioEspecial && (slot.disponible || slot.reservada) && (
           <span className="text-[10px] leading-none font-normal opacity-80">
             {formatPrecio(slot.precio)}
+          </span>
+        )}
+        {slot.reservada && (
+          <span className="text-[10px] leading-none font-normal opacity-80">
+            {textoCupo(capacidad, slot.jugadores)}
           </span>
         )}
       </button>
@@ -387,13 +484,13 @@ export function CourtSlotPicker({
             </p>
           )}
 
-          {horaSeleccionada && slotSeleccionado && !turnoElegidoSeOcupo && (
+          {horaSeleccionada && slotSeleccionado && slotSeleccionado.disponible && (
             <div className="flex flex-col gap-3">
               <p className="font-heading text-lg font-bold">
                 {diaEnPalabras(diaElegido)} · {horaSeleccionada} a {slotSeleccionado.horaFin} hs
               </p>
-              {/* El desglose en tres renglones: cuánto sale, cuánto es la seña
-                  y cuánto queda para pagar en la cancha */}
+              {/* El desglose: cuánto sale, cuánto es la seña, el descuento por
+                  nivel (si tiene) y cuánto queda para pagar en la cancha */}
               <div className="space-y-1.5 text-sm">
                 <p className="text-muted-foreground flex justify-between gap-3">
                   <span>
@@ -406,13 +503,71 @@ export function CourtSlotPicker({
                   <span>Seña del {porcentajeSena}% para confirmar</span>
                   <span className="text-primary">{formatPrecio(montoSenaSeleccionada)}</span>
                 </p>
+                {descuentoSeleccionado > 0 && (
+                  <p className="flex justify-between gap-3">
+                    <span>
+                      Descuento {nivel.nombre} ({nivel.descuento}%)
+                      <span className="text-muted-foreground"> · lo paga TocaYJuga</span>
+                    </span>
+                    <span className="text-primary font-semibold">
+                      −{formatPrecio(descuentoSeleccionado)}
+                    </span>
+                  </p>
+                )}
                 <p className="text-muted-foreground flex justify-between gap-3">
                   <span>El resto se paga en la cancha</span>
                   <span>
-                    {formatPrecio(Number(slotSeleccionado.precio) - montoSenaSeleccionada)}
+                    {formatPrecio(
+                      Number(slotSeleccionado.precio) -
+                        montoSenaSeleccionada -
+                        descuentoSeleccionado,
+                    )}
                   </span>
                 </p>
               </div>
+
+              {/* Completa o falta gente. La seña no cambia; si está incompleta
+                  se carga cuántos jugadores hay y se muestra cuántos faltan.
+                  Este subtexto va en su propio renglón, aparte del "(precio
+                  especial)" de arriba, así conviven sin pisarse. */}
+              <div className="space-y-2">
+                <Label>¿Ya tenés el equipo completo?</Label>
+                <RadioGroup
+                  value={completa ? 'completa' : 'incompleta'}
+                  onValueChange={(valor) => setCompleta(valor === 'completa')}
+                  className="flex gap-4"
+                >
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <RadioGroupItem value="completa" />
+                    Completa
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <RadioGroupItem value="incompleta" />
+                    Falta gente
+                  </label>
+                </RadioGroup>
+
+                {!completa && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cantidadJugadores">Cuántos jugadores son</Label>
+                    <Input
+                      id="cantidadJugadores"
+                      type="number"
+                      min={1}
+                      max={maxJugadores}
+                      value={cantidadTexto}
+                      // Se escribe libre; se acota a 1..máximo al salir del campo
+                      onChange={(e) => setCantidadTexto(e.target.value)}
+                      onBlur={() => setCantidadTexto(String(cantidadParaMandar()))}
+                    />
+                    <p className="text-muted-foreground text-sm">
+                      {textoJugadoresFaltantes(capacidad, cantidadParaMandar()) ??
+                        `Con ${maxJugadores} jugadores queda completa.`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <Button size="lg" onClick={reservar} disabled={estado === 'reservando'}>
                 {estado === 'reservando' ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -421,6 +576,55 @@ export function CourtSlotPicker({
                 )}
                 {estado === 'reservando' ? 'Reservando...' : 'Reservar'}
               </Button>
+            </div>
+          )}
+
+          {/* Turno de otro equipo al que le falta gente: te podés sumar sin seña */}
+          {horaSeleccionada && slotSeleccionado && slotSeleccionado.puedeUnirse && (
+            <div className="flex flex-col gap-3">
+              <p className="font-heading text-lg font-bold">
+                {diaEnPalabras(diaElegido)} · {horaSeleccionada} a {slotSeleccionado.horaFin} hs
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Este turno ya lo reservó otro equipo y le falta gente. Podés sumarte sin pagar seña.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="cantidadParaUnirse">Cuántos se suman</Label>
+                <Input
+                  id="cantidadParaUnirse"
+                  type="number"
+                  min={1}
+                  max={jugadoresFaltantes(capacidad, slotSeleccionado.jugadores)}
+                  value={cantidadTexto}
+                  // Se escribe libre; se acota a 1..lo que falta al salir del campo
+                  onChange={(e) => setCantidadTexto(e.target.value)}
+                  onBlur={() => setCantidadTexto(String(cantidadParaUnirse()))}
+                />
+                <p className="text-muted-foreground text-sm">
+                  {textoJugadoresFaltantes(capacidad, slotSeleccionado.jugadores)} (
+                  {textoCupo(capacidad, slotSeleccionado.jugadores)})
+                </p>
+              </div>
+              <Button size="lg" onClick={unirse} disabled={estado === 'uniendo'}>
+                {estado === 'uniendo' ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+                {estado === 'uniendo' ? 'Sumándote...' : 'Sumarte a este turno'}
+              </Button>
+            </div>
+          )}
+
+          {estado === 'unido' && (
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="text-primary mt-0.5 size-5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">Te sumaste al turno</p>
+                <p className="text-muted-foreground text-xs">
+                  Ya figurás en esa reserva. No tenés que pagar seña.
+                </p>
+              </div>
             </div>
           )}
 

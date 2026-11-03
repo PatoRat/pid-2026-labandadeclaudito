@@ -7,6 +7,7 @@ const base = {
   horaApertura: '08:00',
   horaCierre: '23:00',
   duracionTurnoMin: 60,
+  capacidad: 10,
   porcentajeSena: null,
   minAdvanceMinutes: null,
 }
@@ -73,5 +74,21 @@ describe('updateCourtSchema — combinación deporte/superficie', () => {
       tipoSuperficie: 'PARQUET',
     })
     expect(parsed.success).toBe(false)
+  })
+})
+
+describe('updateCourtSchema — capacidad', () => {
+  const futbol5 = { ...base, deporte: 'FUTBOL_5', tipoSuperficie: 'CESPED_SINTETICO' }
+
+  test('acepta de 2 a 30 jugadores', () => {
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: 2 }).success).toBe(true)
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: '12' }).success).toBe(true)
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: 30 }).success).toBe(true)
+  })
+
+  test('rechaza menos de 2, más de 30 o vacío', () => {
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: 1 }).success).toBe(false)
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: 31 }).success).toBe(false)
+    expect(updateCourtSchema.safeParse({ ...futbol5, capacidad: '' }).success).toBe(false)
   })
 })

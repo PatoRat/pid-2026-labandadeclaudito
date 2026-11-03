@@ -36,6 +36,13 @@ export const createCourtSchema = z
     horaApertura: z.string().regex(horaRegex, 'Formato HH:MM'),
     horaCierre: z.string().regex(horaRegex, 'Formato HH:MM'),
     duracionTurnoMin: z.coerce.number().int().min(30).max(180),
+    // Máximo de jugadores por reserva (ambos equipos). Al sumarse a un partido
+    // incompleto, no se puede pasar de esto.
+    capacidad: z.coerce
+      .number()
+      .int('Tiene que ser un número entero')
+      .min(2, 'Mínimo 2 jugadores')
+      .max(30, 'Máximo 30 jugadores'),
   })
   .superRefine((data, ctx) =>
     validarCombinacionDeporteSuperficie(data.deporte, data.tipoSuperficie, ctx),
@@ -58,6 +65,13 @@ export const updateCourtSchema = z
     horaApertura: z.string().regex(horaRegex, 'Formato HH:MM'),
     horaCierre: z.string().regex(horaRegex, 'Formato HH:MM'),
     duracionTurnoMin: z.coerce.number().int().min(30).max(180),
+    // Máximo de jugadores por reserva (ambos equipos). Al sumarse a un partido
+    // incompleto, no se puede pasar de esto.
+    capacidad: z.coerce
+      .number()
+      .int('Tiene que ser un número entero')
+      .min(2, 'Mínimo 2 jugadores')
+      .max(30, 'Máximo 30 jugadores'),
     // null = usa el % de seña por defecto del complejo, no uno propio
     porcentajeSena: z
       .number()

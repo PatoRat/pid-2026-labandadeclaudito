@@ -7,6 +7,8 @@ type ReservaDelHistorial = {
   estado: EstadoReserva
   asistio: boolean | null
   precioTurno: string
+  // Descuento por nivel, que paga la plataforma ("0" = sin descuento)
+  descuento: string
   pago: { monto: string; porcentaje: number; devuelto: boolean } | null
 }
 
@@ -60,21 +62,33 @@ export function montoDelHistorial(
     }
   }
 
+  // El jugador paga el turno menos el descuento; el dueño cobra el turno entero
+  // (la diferencia se la paga TocaYJuga).
+  const descuento = Number(reserva.descuento)
+  const textoDescuento =
+    descuento > 0
+      ? esJugador
+        ? `descuento por nivel ${formatPrecio(descuento)}`
+        : `TocaYJuga paga ${formatPrecio(descuento)}`
+      : null
+
   if (yaPaso) {
     return {
       etiqueta: esJugador ? 'Total del turno' : 'Total cobrado',
-      monto: formatPrecio(precioTurno),
+      monto: formatPrecio(esJugador ? Number(precioTurno) - descuento : precioTurno),
+      detalle: textoDescuento ?? undefined,
       tono: 'normal',
     }
   }
 
-  const resta = Number(precioTurno) - Number(pago?.monto ?? 0)
+  const resta = Math.max(Number(precioTurno) - Number(pago?.monto ?? 0) - descuento, 0)
+  const textoSena = pago
+    ? `${esJugador ? 'Seña pagada' : 'Seña cobrada'} ${formatPrecio(pago.monto)} de ${formatPrecio(precioTurno)}`
+    : null
   return {
     etiqueta: esJugador ? 'Pagás en el complejo' : 'A cobrar en el complejo',
     monto: formatPrecio(resta),
-    detalle: pago
-      ? `${esJugador ? 'Seña pagada' : 'Seña cobrada'} ${formatPrecio(pago.monto)} de ${formatPrecio(precioTurno)}`
-      : undefined,
+    detalle: [textoSena, textoDescuento].filter(Boolean).join(' · ') || undefined,
     tono: 'normal',
   }
 }

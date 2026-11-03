@@ -6,6 +6,9 @@ import { precioDelTurno, precioProporcional } from '@/lib/availability'
 import { getBlocksOfDay, isSlotBlocked } from '@/lib/blocks'
 import { pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
+import { normalizarJugadores } from '@/lib/jugadores'
+import { montoDelDescuento, nivelDe, puntosDeLosPartidos } from '@/lib/gamificacion'
+import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import {
   DIAS_MAXIMOS_DE_ANTICIPACION,
   diaSemanaDeReserva,
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
     },
     include: {
       preciosEspeciales: { where: { activo: true } },
-      complejo: { select: { minAdvanceMinutesDefault: true } },
+      complejo: { select: { minAdvanceMinutesDefault: true, porcentajeSenaDefault: true } },
     },
   })
   if (!cancha) {
@@ -109,9 +112,17 @@ export async function POST(request: Request) {
   }
 
   // Un jugador no puede estar en dos canchas a la vez: se busca otra reserva
-  // suya ese mismo día cuyo horario se cruce con el turno pedido.
+  // ese mismo día (suya o a la que se sumó) cuyo horario se cruce con el turno
+  // pedido.
   const reservasDelJugador = await db.reserva.findMany({
-    where: { jugadorId: session.user.id, fecha, estado: { not: 'CANCELADA' } },
+    where: {
+      OR: [
+        { jugadorId: session.user.id },
+        { participantes: { some: { jugadorId: session.user.id } } },
+      ],
+      fecha,
+      estado: { not: 'CANCELADA' },
+    },
   })
   for (const otraReserva of reservasDelJugador) {
     if (
@@ -145,6 +156,17 @@ export async function POST(request: Request) {
     cancha.duracionTurnoMin,
   )
 
+  // Descuento por el nivel que tiene el jugador hoy: queda congelado en la
+  // reserva aunque después suba o baje de nivel. Mismo % de seña que usa
+  // /deposit, para que el descuento nunca pase lo que se paga en la cancha.
+  const misPartidos = await getPartidosDeJugadores([session.user.id])
+  const { actual: nivel } = nivelDe(puntosDeLosPartidos(misPartidos.get(session.user.id) ?? []))
+  const descuento = montoDelDescuento(
+    Number(precioTurno),
+    nivel.descuento,
+    cancha.porcentajeSena ?? cancha.complejo.porcentajeSenaDefault,
+  )
+
   // Las canceladas no ocupan el turno: reservar uno cancelado crea una fila
   // nueva y la cancelada queda en el historial de su jugador, con su pago.
   const reservaActiva = await db.reserva.findFirst({
@@ -159,6 +181,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ese horario ya fue reservado' }, { status: 409 })
   }
 
+  // Sin jugadores en el body la reserva es completa (null). Con un número,
+  // está incompleta: se normaliza al máximo del deporte (nunca más que el
+  // máximo, nunca negativo).
+  const jugadores =
+    parsed.data.jugadores === undefined
+      ? null
+      : normalizarJugadores(cancha.capacidad, parsed.data.jugadores)
+
   // La reserva nace PENDIENTE (de seña): pasa a CONFIRMADA recién cuando el
   // jugador paga la seña en POST /api/bookings/[id]/deposit.
   try {
@@ -171,6 +201,8 @@ export async function POST(request: Request) {
         horaFin,
         estado: 'PENDIENTE',
         precioTurno,
+        descuento,
+        jugadores,
       },
     })
     return NextResponse.json({ reserva }, { status: 201 })
