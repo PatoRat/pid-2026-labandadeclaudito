@@ -33,6 +33,10 @@ export function TarjetaPartidoAbierto({ reserva }: { reserva: PartidoAbierto }) 
           <Clock className="size-3.5 shrink-0" />
           {reserva.horaInicio} a {reserva.horaFin} hs
         </p>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Organiza {reserva.jugador.nombre.split(' ')[0]} ·{' '}
+          <span className="text-foreground font-semibold">{reserva.nivelDelOrganizador}</span>
+        </p>
         <p className="mt-2 text-sm font-semibold">{reserva.cancha.nombre}</p>
         <p className="text-muted-foreground truncate text-sm">
           {reserva.cancha.complejo.nombre} · {reserva.cancha.complejo.direccion}

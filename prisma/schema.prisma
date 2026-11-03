@@ -204,6 +204,10 @@ model Reserva {
   // Precio del turno congelado al momento de reservar (no se recalcula
   // aunque después cambie precioBase o haya un PrecioEspecial nuevo).
   precioTurno         Decimal       @db.Decimal(10, 2)
+  // Descuento por nivel del jugador, congelado al reservar. Lo paga la
+  // plataforma: el jugador paga precioTurno - descuento y el dueño cobra igual
+  // el precioTurno entero. 0 = sin descuento (también las reservas viejas).
+  descuento           Decimal       @default(0) @db.Decimal(10, 2)
   // Jugadores cargados cuando la reserva está incompleta. null = completa
   // (también las reservas viejas). Un número menor al máximo del deporte =
   // incompleta; faltan (máximo - jugadores) para completar.

@@ -9,6 +9,8 @@ import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
+import { puntosDeLosPartidos } from '@/lib/gamificacion'
+import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -17,6 +19,7 @@ import { RefreshWhenDepositExpires } from '@/components/refresh-when-deposit-exp
 import { FilaDeTurno } from '@/components/fila-de-turno'
 import { ProximoTurnoDestacado } from '@/components/proximo-turno-destacado'
 import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
+import { TarjetaNivel } from '@/components/tarjeta-nivel'
 
 export default async function JugadorHomePage() {
   const session = await auth()
@@ -25,8 +28,8 @@ export default async function JugadorHomePage() {
   const hoy = diaDeHoy()
   const sabado = proximoSabado(hoy)
 
-  // Las cinco consultas no dependen entre sí: se hacen a la vez (una sola
-  // espera a la base en lugar de cinco seguidas).
+  // Las consultas no dependen entre sí: se hacen a la vez (una sola espera a
+  // la base en lugar de varias seguidas).
   const [
     proximasReservas,
     totalProximasReservas,
@@ -34,6 +37,7 @@ export default async function JugadorHomePage() {
     totalComplejos,
     reservasDelSabado,
     partidosAbiertosTodos,
+    misPartidos,
   ] = await Promise.all([
     db.reserva.findMany({
       where: {
@@ -65,7 +69,10 @@ export default async function JugadorHomePage() {
       },
     }),
     getPartidosAbiertos(session.user.id),
+    getPartidosDeJugadores([session.user.id]),
   ])
+
+  const puntos = puntosDeLosPartidos(misPartidos.get(session.user.id) ?? [])
 
   // En el feed se muestran los primeros; el resto se ve en Buscar canchas
   const partidosAbiertos = partidosAbiertosTodos.slice(0, 4)
@@ -223,6 +230,8 @@ export default async function JugadorHomePage() {
         </section>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <TarjetaNivel puntos={puntos} conLink />
+
           {/* Un número protagonista y dos de apoyo, en vez de tres tarjetas iguales */}
           <div className="bg-card shadow-card rounded-3xl p-7">
             <p className="text-muted-foreground text-sm font-semibold">Desde que te sumaste</p>

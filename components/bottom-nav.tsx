@@ -52,7 +52,7 @@ export function BottomNav({
             }
           >
             <item.icon />
-            <span>{item.label}</span>
+            <span>{item.labelCorto ?? item.label}</span>
           </Link>
         )
       })}

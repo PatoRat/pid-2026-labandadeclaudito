@@ -31,6 +31,7 @@ import {
   textoJugadoresFaltantes,
 } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
+import { montoDelDescuento, type Nivel } from '@/lib/gamificacion'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
 
 type Slot = {
@@ -64,12 +65,15 @@ export function CourtSlotPicker({
   deporte,
   precioBase,
   fechaInicial,
+  nivel,
 }: {
   courtId: string
   courtName: string
   deporte: Deporte
   precioBase: string
   fechaInicial?: string
+  // Nivel del jugador: su % de descuento se muestra en el desglose
+  nivel: Nivel
 }) {
   const maxJugadores = maxJugadoresPorDeporte[deporte]
   // fechaInicial viene como YYYY-MM-DD de la búsqueda. Se arma con parse (fecha
@@ -200,6 +204,10 @@ export function CourtSlotPicker({
     slotSeleccionado !== undefined && !slotSeleccionado.disponible && !slotSeleccionado.puedeUnirse
   const montoSenaSeleccionada = slotSeleccionado
     ? (Number(slotSeleccionado.precio) * porcentajeSena) / 100
+    : 0
+  // Misma cuenta que hace el server al crear la reserva
+  const descuentoSeleccionado = slotSeleccionado
+    ? montoDelDescuento(Number(slotSeleccionado.precio), nivel.descuento, porcentajeSena)
     : 0
 
   // Normaliza el texto del input a un entero válido (1..máximo) para mandarlo.
@@ -486,8 +494,8 @@ export function CourtSlotPicker({
               <p className="font-heading text-lg font-bold">
                 {diaEnPalabras(diaElegido)} · {horaSeleccionada} a {slotSeleccionado.horaFin} hs
               </p>
-              {/* El desglose en tres renglones: cuánto sale, cuánto es la seña
-                  y cuánto queda para pagar en la cancha */}
+              {/* El desglose: cuánto sale, cuánto es la seña, el descuento por
+                  nivel (si tiene) y cuánto queda para pagar en la cancha */}
               <div className="space-y-1.5 text-sm">
                 <p className="text-muted-foreground flex justify-between gap-3">
                   <span>
@@ -500,10 +508,25 @@ export function CourtSlotPicker({
                   <span>Seña del {porcentajeSena}% para confirmar</span>
                   <span className="text-primary">{formatPrecio(montoSenaSeleccionada)}</span>
                 </p>
+                {descuentoSeleccionado > 0 && (
+                  <p className="flex justify-between gap-3">
+                    <span>
+                      Descuento {nivel.nombre} ({nivel.descuento}%)
+                      <span className="text-muted-foreground"> · lo paga TocaYJuga</span>
+                    </span>
+                    <span className="text-primary font-semibold">
+                      −{formatPrecio(descuentoSeleccionado)}
+                    </span>
+                  </p>
+                )}
                 <p className="text-muted-foreground flex justify-between gap-3">
                   <span>El resto se paga en la cancha</span>
                   <span>
-                    {formatPrecio(Number(slotSeleccionado.precio) - montoSenaSeleccionada)}
+                    {formatPrecio(
+                      Number(slotSeleccionado.precio) -
+                        montoSenaSeleccionada -
+                        descuentoSeleccionado,
+                    )}
                   </span>
                 </p>
               </div>

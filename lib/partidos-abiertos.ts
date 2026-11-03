@@ -2,6 +2,8 @@ import { db } from '@/lib/db'
 import { complejoVisible } from '@/lib/complejos'
 import { pendientesVencidas } from '@/lib/bookings'
 import { esIncompleta } from '@/lib/jugadores'
+import { nivelDe, puntosDeLosPartidos } from '@/lib/gamificacion'
+import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import { diaDeHoy, diaDeReserva, turnoYaPaso } from '@/lib/time'
 import type { Prisma } from '@/lib/generated/prisma/client'
 import type { SearchCourtsFilters } from '@/lib/validations/court-search'
@@ -44,15 +46,30 @@ export async function getPartidosAbiertos(jugadorId: string, filtros?: SearchCou
         },
       },
     },
-    include: { cancha: { include: { complejo: true } } },
+    include: {
+      cancha: { include: { complejo: true } },
+      jugador: { select: { nombre: true } },
+    },
     orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
   })
 
   // El "< máximo" depende del deporte, así que se termina de filtrar acá. También
   // se descartan los turnos que ya empezaron.
-  return reservas.filter(
+  const abiertos = reservas.filter(
     (reserva) =>
       esIncompleta(reserva.cancha.deporte, reserva.jugadores) &&
       !turnoYaPaso(diaDeReserva(reserva.fecha), reserva.horaInicio),
   )
+
+  // El nivel de cada organizador, para mostrarlo en la tarjeta. Una sola
+  // consulta para todos (no una por partido).
+  const partidosPorOrganizador = await getPartidosDeJugadores([
+    ...new Set(abiertos.map((reserva) => reserva.jugadorId)),
+  ])
+  return abiertos.map((reserva) => ({
+    ...reserva,
+    nivelDelOrganizador: nivelDe(
+      puntosDeLosPartidos(partidosPorOrganizador.get(reserva.jugadorId) ?? []),
+    ).actual.nombre,
+  }))
 }

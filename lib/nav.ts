@@ -1,4 +1,13 @@
-import { Building2, CalendarDays, ChartColumn, Home, Scale, Search, Users } from 'lucide-react'
+import {
+  Building2,
+  CalendarDays,
+  ChartColumn,
+  Home,
+  Scale,
+  Search,
+  Trophy,
+  Users,
+} from 'lucide-react'
 
 // Navegación de las páginas con sesión, compartida entre el sidebar
 // (components/app-sidebar.tsx) y la barra inferior (components/bottom-nav.tsx).
@@ -6,14 +15,17 @@ import { Building2, CalendarDays, ChartColumn, Home, Scale, Search, Users } from
 export type ItemNav = {
   href: string
   label: string
+  // Para la barra inferior, donde con 5 pestañas un texto largo ocupa 2 renglones
+  labelCorto?: string
   icon: typeof Home
 }
 
 export const navPorRol: Record<'JUGADOR' | 'DUENIO' | 'ADMIN', ItemNav[]> = {
   JUGADOR: [
     { href: '/jugador', label: 'Inicio', icon: Home },
-    { href: '/jugador/canchas', label: 'Buscar canchas', icon: Search },
+    { href: '/jugador/canchas', label: 'Buscar canchas', labelCorto: 'Buscar', icon: Search },
     { href: '/jugador/reservas', label: 'Mis reservas', icon: CalendarDays },
+    { href: '/jugador/ranking', label: 'Ranking', icon: Trophy },
   ],
   DUENIO: [
     { href: '/dueno', label: 'Inicio', icon: Home },

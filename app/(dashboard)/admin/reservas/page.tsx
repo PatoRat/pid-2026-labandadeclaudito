@@ -305,6 +305,7 @@ function FilaReserva({
       estado: reserva.estado,
       asistio: reserva.asistio,
       precioTurno: reserva.precioTurno.toString(),
+      descuento: reserva.descuento.toString(),
       pago: reserva.pago && { ...reserva.pago, monto: reserva.pago.monto.toString() },
     },
     turnoYaPaso(dia, reserva.horaInicio),
