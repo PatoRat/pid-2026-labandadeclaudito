@@ -29,7 +29,7 @@ export function Estrellas({ promedio, cantidad }: ResumenCalificacion) {
           />
         ))}
       </div>
-      <span className="text-sm font-medium">{promedio.toFixed(1)}</span>
+      <span className="text-sm font-medium">{promedio.toFixed(1).replace('.', ',')}</span>
       <span className="text-muted-foreground text-xs">({cantidad})</span>
     </div>
   )
