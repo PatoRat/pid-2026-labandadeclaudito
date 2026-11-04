@@ -1,6 +1,15 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CalendarDays, CircleDot, Clock, LandPlot, Search, ShieldAlert, Wallet } from 'lucide-react'
+import {
+  CalendarDays,
+  CircleDot,
+  Clock,
+  LandPlot,
+  Search,
+  ShieldAlert,
+  Star,
+  Wallet,
+} from 'lucide-react'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import type { Prisma } from '@/lib/generated/prisma/client'
@@ -9,7 +18,7 @@ import { sePuedeDisputar } from '@/lib/disputas'
 import { formatPrecio } from '@/lib/labels'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { montoDelHistorial, type MontoDelHistorial } from '@/lib/historial'
-import { venceLaSena } from '@/lib/estado-reserva'
+import { sePuedeCalificar, venceLaSena } from '@/lib/estado-reserva'
 import { calcularPagina } from '@/lib/paginacion'
 import { diaEnPalabras } from '@/lib/fechas'
 import { diaDeReserva, momentoActual, refundsDeposit, turnoYaPaso } from '@/lib/time'
@@ -22,6 +31,8 @@ import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
 import { EstadoDeDisputa } from '@/components/estado-de-disputa'
 import { EstadoVacio } from '@/components/estado-vacio'
 import { DisputeFormDialog } from '@/components/dispute-form-dialog'
+import { PuntajeEnEstrellas } from '@/components/puntaje-en-estrellas'
+import { RateComplexDialog } from '@/components/rate-complex-dialog'
 import { FranjaDeCancha } from '@/components/franja-de-cancha'
 import { Button } from '@/components/ui/button'
 import { FechaDelTurno } from '@/components/fecha-del-turno'
@@ -55,10 +66,17 @@ async function getReservas(
   orden: 'asc' | 'desc',
   skip: number,
   take: number,
+  jugadorId: string,
 ) {
   return db.reserva.findMany({
     where,
-    include: { cancha: { include: { complejo: true } }, pago: true, disputa: true },
+    include: {
+      cancha: { include: { complejo: true } },
+      pago: true,
+      disputa: true,
+      // Solo la mía: en un partido con sumados, cada uno califica aparte
+      calificaciones: { where: { jugadorId } },
+    },
     orderBy: [{ fecha: orden }, { horaInicio: orden }],
     skip,
     take,
@@ -130,6 +148,7 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
     vista === 'proximas' ? 'asc' : 'desc',
     skip,
     porPagina,
+    jugadorId,
   )
 
   const paginacion = (
@@ -225,6 +244,11 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
                       <TituloConIcono icono={Wallet}>Monto</TituloConIcono>
                     </TableHead>
                     {vista === 'historial' && (
+                      <TableHead className="px-3">
+                        <TituloConIcono icono={Star}>Calificación</TituloConIcono>
+                      </TableHead>
+                    )}
+                    {vista === 'historial' && (
                       <TableHead className="px-3 pr-4 text-right">
                         <TituloConIcono icono={ShieldAlert}>Disputa</TituloConIcono>
                       </TableHead>
@@ -281,6 +305,15 @@ function FilaReserva({
         turnoYaPaso(dia, reserva.horaInicio),
         'JUGADOR',
       )
+  const turno = {
+    estado: reserva.estado,
+    asistio: reserva.asistio,
+    dia,
+    horaInicio: reserva.horaInicio,
+    horaFin: reserva.horaFin,
+  }
+  // La consulta trae solo la del jugador logueado: hay una o ninguna
+  const miCalificacion = reserva.calificaciones[0]
 
   return (
     <TableRow>
@@ -307,6 +340,20 @@ function FilaReserva({
       <TableCell className={conDisputa ? 'px-3' : 'px-3 pr-4'}>
         <CeldaMonto monto={monto} />
       </TableCell>
+      {conDisputa && (
+        <TableCell className="px-3">
+          {miCalificacion ? (
+            <PuntajeEnEstrellas puntaje={miCalificacion.puntaje} />
+          ) : (
+            sePuedeCalificar(turno, ahora) && (
+              <RateComplexDialog
+                bookingId={reserva.id}
+                nombreComplejo={reserva.cancha.complejo.nombre}
+              />
+            )
+          )}
+        </TableCell>
+      )}
       {conDisputa && (
         <TableCell className="px-3 pr-4 text-right">
           {/* Las disputas son del dueño de la reserva, no del que se sumó */}
