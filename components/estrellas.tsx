@@ -10,8 +10,9 @@ export function Estrellas({ promedio, cantidad }: ResumenCalificacion) {
     return <span className="text-muted-foreground text-xs">Sin calificaciones</span>
   }
 
-  // Cuántas de las 5 estrellas se dibujan rellenas (se redondea el promedio).
-  const estrellasLlenas = Math.round(promedio)
+  // Cuántas de las 5 estrellas se dibujan rellenas: se redondea para abajo, así
+  // un promedio menor a 2 muestra 1 estrella, menor a 3 muestra 2, etc.
+  const estrellasLlenas = Math.floor(promedio)
   const estrellas = [1, 2, 3, 4, 5]
 
   return (
