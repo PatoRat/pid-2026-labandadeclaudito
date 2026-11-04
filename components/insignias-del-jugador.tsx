@@ -4,6 +4,7 @@ import {
   Map as MapIcon,
   Megaphone,
   ShieldCheck,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 import { INSIGNIAS } from '@/lib/gamificacion'
@@ -15,6 +16,7 @@ const iconos: Record<string, LucideIcon> = {
   refuerzo: Handshake,
   organizador: Megaphone,
   trotamundos: MapIcon,
+  critico: Star,
 }
 
 // Todas las insignias: las ganadas en color, las que faltan en gris con cómo

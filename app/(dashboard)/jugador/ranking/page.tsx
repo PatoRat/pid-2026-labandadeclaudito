@@ -126,8 +126,8 @@ export default async function RankingPage() {
             )}
             <p className="text-muted-foreground mt-3 text-sm">
               Jugar suma {PUNTOS.jugado}, sumarte al partido de otro {PUNTOS.sumado} y publicar un
-              partido con cupos libres {PUNTOS.abierto} más. Faltar a un turno resta{' '}
-              {-PUNTOS.noShow}.
+              partido con cupos libres {PUNTOS.abierto} más. Calificar un complejo suma{' '}
+              {PUNTOS.calificar}. Faltar a un turno resta {-PUNTOS.noShow}.
             </p>
           </div>
         </aside>

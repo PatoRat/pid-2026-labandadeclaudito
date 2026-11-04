@@ -22,6 +22,7 @@ function partido(cambios: Partial<PartidoDelJugador> = {}): PartidoDelJugador {
     propio: true,
     jugadores: null,
     complejoId: 'complejo-1',
+    calificado: false,
     ...cambios,
   }
 }
@@ -49,6 +50,16 @@ describe('puntosDe', () => {
 
   test('no presentarse resta 20', () => {
     expect(puntos([partido(), partido({ asistio: false })])).toBe(-10)
+  })
+
+  test('calificar el complejo de un partido jugado suma 3 más', () => {
+    expect(puntos([partido({ calificado: true })])).toBe(13)
+    expect(puntos([partido({ propio: false, calificado: true })])).toBe(18)
+  })
+
+  test('una calificación de un turno que no se jugó no suma', () => {
+    expect(puntos([partido({ estado: 'CANCELADA', calificado: true })])).toBe(0)
+    expect(puntos([partido({ asistio: false, calificado: true })])).toBe(-20)
   })
 
   test('canceladas, pendientes y turnos que no terminaron no suman', () => {
@@ -132,6 +143,13 @@ describe('insigniasGanadas', () => {
     expect(insignias([...dosComplejos, partido({ complejoId: 'complejo-3' })])).toContain(
       'trotamundos',
     )
+  })
+
+  test('Crítico: 5 calificaciones', () => {
+    const calificados = (n: number) =>
+      Array.from({ length: n }, () => partido({ calificado: true }))
+    expect(insignias(calificados(4))).not.toContain('critico')
+    expect(insignias(calificados(5))).toContain('critico')
   })
 })
 

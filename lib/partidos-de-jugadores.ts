@@ -29,6 +29,7 @@ export async function getPartidosDeJugadores(
       jugadores: true,
       cancha: { select: { complejoId: true } },
       participantes: { select: { jugadorId: true } },
+      calificaciones: { select: { jugadorId: true } },
     },
   })
 
@@ -45,9 +46,15 @@ export async function getPartidosDeJugadores(
     }
     // Una misma reserva cuenta para el que la hizo y para cada uno que se sumó.
     // Los que no se pidieron no están en el Map y se saltean.
-    porJugador.get(reserva.jugadorId)?.push({ ...partido, propio: true })
+    const califico = (jugadorId: string) =>
+      reserva.calificaciones.some((calificacion) => calificacion.jugadorId === jugadorId)
+    porJugador
+      .get(reserva.jugadorId)
+      ?.push({ ...partido, propio: true, calificado: califico(reserva.jugadorId) })
     for (const participante of reserva.participantes) {
-      porJugador.get(participante.jugadorId)?.push({ ...partido, propio: false })
+      porJugador
+        .get(participante.jugadorId)
+        ?.push({ ...partido, propio: false, calificado: califico(participante.jugadorId) })
     }
   }
   return porJugador

@@ -12,6 +12,8 @@ export type PartidoDelJugador = ReservaParaEstado & {
   propio: boolean
   jugadores: number | null
   complejoId: string
+  // El jugador ya calificó el complejo por este turno
+  calificado: boolean
 }
 
 export type EstadisticasDelJugador = {
@@ -20,12 +22,14 @@ export type EstadisticasDelJugador = {
   abiertosJugados: number
   noShows: number
   complejos: number
+  calificaciones: number
 }
 
 export const PUNTOS = {
   jugado: 10,
   sumado: 15,
   abierto: 5,
+  calificar: 3,
   noShow: -20,
 }
 
@@ -39,6 +43,7 @@ export function estadisticasDelJugador(
     abiertosJugados: 0,
     noShows: 0,
     complejos: 0,
+    calificaciones: 0,
   }
   const complejos = new Set<string>()
 
@@ -55,6 +60,7 @@ export function estadisticasDelJugador(
     if (estado !== 'ASISTIO' && estado !== 'FINALIZADA') continue
 
     complejos.add(partido.complejoId)
+    if (partido.calificado) estadisticas.calificaciones++
     if (!partido.propio) {
       estadisticas.jugadosSumado++
       continue
@@ -72,6 +78,7 @@ export function puntosDe(e: EstadisticasDelJugador): number {
     e.jugadosPropios * PUNTOS.jugado +
     e.jugadosSumado * PUNTOS.sumado +
     e.abiertosJugados * PUNTOS.abierto +
+    e.calificaciones * PUNTOS.calificar +
     e.noShows * PUNTOS.noShow
   )
 }
@@ -150,6 +157,12 @@ export const INSIGNIAS = [
     nombre: 'Trotamundos',
     descripcion: 'Jugaste en 3 complejos distintos',
     ganada: (e: EstadisticasDelJugador) => e.complejos >= 3,
+  },
+  {
+    id: 'critico',
+    nombre: 'Crítico',
+    descripcion: 'Calificaste 5 complejos',
+    ganada: (e: EstadisticasDelJugador) => e.calificaciones >= 5,
   },
 ]
 
