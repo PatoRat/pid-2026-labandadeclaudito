@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { getCalificaciones } from '@/lib/calificaciones'
 import { getAvailableSlots, precioDelTurno } from '@/lib/availability'
 import { complejoVisible } from '@/lib/complejos'
 import { deporteLabels, formatPrecio, superficieLabels } from '@/lib/labels'
@@ -215,10 +216,33 @@ export async function searchComplexes(filtros: SearchCourtsFilters, jugadorId?: 
     })),
   )
 
+  // Se le pega a cada complejo su promedio de estrellas y cuántas opiniones
+  // tiene, para mostrarlo en la tarjeta y poder filtrar por calificación mínima.
+  const ids: string[] = []
+  for (const complejo of complejosConCanchas) {
+    ids.push(complejo.id)
+  }
+  const calificaciones = await getCalificaciones(ids)
+  const complejosConCalificacion = complejosConCanchas.map((complejo) => ({
+    ...complejo,
+    calificacion: calificaciones.get(complejo.id) ?? { promedio: 0, cantidad: 0 },
+  }))
+
+  // Filtro de calificación mínima: los complejos sin ninguna calificación no
+  // pasan (no se puede saber si llegan al mínimo).
+  const calificacionMin = filtros.calificacionMin
+  const complejosFiltrados =
+    calificacionMin === undefined
+      ? complejosConCalificacion
+      : complejosConCalificacion.filter(
+          (complejo) =>
+            complejo.calificacion.cantidad > 0 && complejo.calificacion.promedio >= calificacionMin,
+        )
+
   // Los complejos con todas sus canchas bloqueadas ese día van al final
   const conAlgoLibre = []
   const todoBloqueado = []
-  for (const complejo of complejosConCanchas) {
+  for (const complejo of complejosFiltrados) {
     if (complejo.canchas.length === 0) continue
     let todasBloqueadas = true
     for (const cancha of complejo.canchas) {
@@ -280,6 +304,14 @@ export function activeFilterChips(filtros: SearchCourtsFilters): FilterChip[] {
     chips.push({
       label: `Superficie: ${superficieLabels[filtros.tipoSuperficie]}`,
       withoutIt: { ...filtros, tipoSuperficie: undefined },
+    })
+  }
+  if (filtros.calificacionMin !== undefined) {
+    const etiqueta =
+      filtros.calificacionMin === 5 ? '5 estrellas' : `${filtros.calificacionMin}+ estrellas`
+    chips.push({
+      label: `Calificación: ${etiqueta}`,
+      withoutIt: { ...filtros, calificacionMin: undefined },
     })
   }
   if (filtros.precioMin !== undefined) {

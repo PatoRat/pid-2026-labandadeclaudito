@@ -29,6 +29,13 @@ export const searchCourtsSchema = z
       .transform((texto) => Number(texto))
       .optional()
       .catch(undefined),
+    calificacionMin: z
+      .string()
+      .regex(/^\d+$/)
+      .transform((texto) => Number(texto))
+      .refine((n) => n >= 1 && n <= 5)
+      .optional()
+      .catch(undefined),
     fecha: z.string().refine(esDiaReal).optional().catch(undefined),
     horaDesde: z.string().regex(horaRegex).optional().catch(undefined),
     horaHasta: z.string().regex(horaRegex).optional().catch(undefined),
