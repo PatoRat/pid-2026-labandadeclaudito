@@ -78,6 +78,7 @@ model Usuario {
   participaciones   ParticipanteReserva[]  @relation("ParticipacionesDelJugador")
   disputas          Disputa[]              @relation("DisputasDelJugador")
   disputasResueltas Disputa[]              @relation("DisputasResueltas")
+  calificaciones    Calificacion[]         @relation("CalificacionesDelJugador")
 }
 
 model Complejo {
@@ -108,6 +109,7 @@ model Complejo {
   duenio   Usuario          @relation("DuenioComplejos", fields: [duenioId], references: [id])
   canchas  Cancha[]
   imagenes ImagenComplejo[]
+  calificaciones Calificacion[]
 
   @@index([zona])
   @@index([duenioId])
@@ -221,6 +223,7 @@ model Reserva {
   participantes ParticipanteReserva[]
   pago         Pago?
   disputa      Disputa?
+  calificaciones Calificacion[]
 
   // Última defensa contra doble reserva: no puede haber dos reservas activas
   // en la misma cancha, fecha y hora de inicio. Las canceladas no cuentan:
@@ -317,4 +320,30 @@ model EvidenciaDisputa {
   disputa Disputa @relation(fields: [disputaId], references: [id], onDelete: Cascade)
 
   @@index([disputaId])
+}
+
+// Estrellas que un jugador le pone a un complejo después de jugar. Una por
+// reserva y por jugador: el que reservó y cada uno que se sumó califican por
+// separado. El puntaje (1 a 5) lo valida el endpoint con Zod.
+model Calificacion {
+  id         String   @id @default(cuid())
+  reservaId  String
+  jugadorId  String
+  // Se podría sacar de reserva → cancha → complejo, pero guardarlo acá deja
+  // calcular el promedio de un complejo sin joins (ver índice de abajo).
+  complejoId String
+  puntaje    Int
+  comentario String?
+  createdAt  DateTime @default(now())
+
+  reserva  Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  jugador  Usuario  @relation("CalificacionesDelJugador", fields: [jugadorId], references: [id])
+  complejo Complejo @relation(fields: [complejoId], references: [id])
+
+  // Corta también dos pedidos a la vez: el segundo falla con P2002
+  @@unique([reservaId, jugadorId])
+  // Promedio y cantidad por complejo (búsqueda y detalle)
+  @@index([complejoId])
+  // Cuántas calificó cada jugador (gamificación)
+  @@index([jugadorId])
 }
