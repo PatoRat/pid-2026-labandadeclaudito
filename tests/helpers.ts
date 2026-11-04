@@ -172,6 +172,11 @@ export async function limpiarDatosDeTest() {
   }
 
   // Orden de borrado según las FK: primero lo que apunta a otras tablas
+  await db.calificacion.deleteMany({
+    where: {
+      OR: [{ jugadorId: { in: idsDeUsuarios } }, { complejoId: { in: idsDeComplejos } }],
+    },
+  })
   await db.reserva.deleteMany({
     where: { OR: [{ jugadorId: { in: idsDeUsuarios } }, { canchaId: { in: idsDeCanchas } }] },
   })
