@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { PerfilForm } from '@/components/perfil-form'
 import { TarjetaNivel } from '@/components/tarjeta-nivel'
+import { EscaleraDeNiveles } from '@/components/escalera-de-niveles'
 import { InsigniasDelJugador } from '@/components/insignias-del-jugador'
 import { homePorRol } from '@/lib/home-por-rol'
 import { estadisticasDelJugador, puntosDe } from '@/lib/gamificacion'
@@ -49,6 +50,7 @@ export default async function PerfilPage() {
           </p>
           <div className="mt-5 space-y-5">
             <TarjetaNivel puntos={puntosDelNivel} />
+            <EscaleraDeNiveles puntos={puntosDelNivel} />
             <InsigniasDelJugador estadisticas={estadisticas} />
           </div>
         </section>
