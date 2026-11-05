@@ -1,10 +1,19 @@
 import Link from 'next/link'
-import { ArrowRight, Trophy } from 'lucide-react'
+import { ArrowRight, Flame, Trophy } from 'lucide-react'
 import { nivelDe } from '@/lib/gamificacion'
 
 // Nivel del jugador con la barra hasta el siguiente. Va en el Inicio y en el
 // perfil; conLink lleva a las insignias (en el perfil ya están debajo).
-export function TarjetaNivel({ puntos, conLink = false }: { puntos: number; conLink?: boolean }) {
+// racha: semanas seguidas jugando (0 = no tiene racha y no se muestra).
+export function TarjetaNivel({
+  puntos,
+  racha = 0,
+  conLink = false,
+}: {
+  puntos: number
+  racha?: number
+  conLink?: boolean
+}) {
   const { actual, siguiente, faltan } = nivelDe(puntos)
 
   // Cuánto del tramo actual ya recorrió. Con puntos negativos queda en 0.
@@ -38,6 +47,15 @@ export function TarjetaNivel({ puntos, conLink = false }: { puntos: number; conL
           ? `Te faltan ${faltan} puntos para ${siguiente.nombre}`
           : 'Llegaste al nivel máximo'}
       </p>
+
+      {racha > 0 && (
+        <p className="bg-clay/12 text-clay-foreground mt-4 flex items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-semibold">
+          <Flame className="animate-llama size-4.5 motion-reduce:animate-none shrink-0" />
+          {racha === 1
+            ? 'Jugaste esta semana: ¡seguí la racha la que viene!'
+            : `¡${racha} semanas seguidas jugando!`}
+        </p>
+      )}
 
       {conLink && (
         <Link

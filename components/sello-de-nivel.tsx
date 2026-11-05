@@ -1,4 +1,4 @@
-import { Crown, Flame, Medal, Shield, Shirt, type LucideIcon } from 'lucide-react'
+import { Crown, Medal, Shield, Shirt, Sparkles, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Cada nivel con su ícono y su color, de más apagado a más llamativo: así de
@@ -7,7 +7,7 @@ const estiloPorNivel: Record<string, { icono: LucideIcon; clases: string }> = {
   Suplente: { icono: Shirt, clases: 'bg-muted text-muted-foreground' },
   Titular: { icono: Medal, clases: 'bg-primary/12 text-primary' },
   Capitán: { icono: Shield, clases: 'bg-clay/15 text-clay-foreground' },
-  Crack: { icono: Flame, clases: 'bg-highlight text-highlight-foreground' },
+  Crack: { icono: Sparkles, clases: 'bg-highlight text-highlight-foreground' },
   Leyenda: { icono: Crown, clases: 'bg-sidebar text-highlight' },
 }
 

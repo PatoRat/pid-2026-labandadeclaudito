@@ -194,6 +194,14 @@
       transform: translate(0, -18px) scale(1.15);
     }
   }
+
+  /* Llama de la racha: late como un fuego chico */
+  --animate-llama: llama 1.4s ease-in-out infinite;
+  @keyframes llama {
+    50% {
+      transform: scale(1.18) rotate(-6deg);
+    }
+  }
 }
 
 /* Colores por deporte del dashboard del dueño.

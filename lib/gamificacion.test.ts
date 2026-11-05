@@ -5,6 +5,7 @@ import {
   insigniasGanadas,
   montoDelDescuento,
   nivelDe,
+  numeroDeSemana,
   puntosDe,
   puntosDelPartido,
   rankingDelMes,
@@ -262,5 +263,38 @@ describe('puntosDelPartido', () => {
 
   test('un partido que todavía no se jugó no suma', () => {
     expect(puntosDelPartido(partido({ dia: '2026-11-10' }), ahora)).toBe(0)
+  })
+})
+
+describe('racha de semanas', () => {
+  function racha(partidos: PartidoDelJugador[]): number {
+    return estadisticasDelJugador(partidos, ahora).rachaSemanas
+  }
+
+  test('lunes y domingo son de la misma semana; el lunes siguiente, de otra', () => {
+    expect(numeroDeSemana('2026-11-02')).toBe(numeroDeSemana('2026-11-08'))
+    expect(numeroDeSemana('2026-11-09')).toBe(numeroDeSemana('2026-11-08') + 1)
+  })
+
+  test('tres semanas seguidas jugando dan racha de 3', () => {
+    // ahora es jueves 5/11: esta semana, la anterior y la otra
+    const partidos = [
+      partido({ dia: '2026-11-02' }),
+      partido({ dia: '2026-10-28' }),
+      partido({ dia: '2026-10-20' }),
+    ]
+    expect(racha(partidos)).toBe(3)
+  })
+
+  test('si esta semana todavía no jugó, la racha sigue desde la pasada', () => {
+    expect(racha([partido({ dia: '2026-10-28' }), partido({ dia: '2026-10-20' })])).toBe(2)
+  })
+
+  test('una semana sin jugar corta la racha', () => {
+    expect(racha([partido({ dia: '2026-11-02' }), partido({ dia: '2026-10-20' })])).toBe(1)
+  })
+
+  test('un partido que todavía no se jugó no cuenta', () => {
+    expect(racha([partido({ dia: '2026-11-10' })])).toBe(0)
   })
 })

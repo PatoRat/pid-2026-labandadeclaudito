@@ -1,5 +1,6 @@
 import {
   Check,
+  Flame,
   Footprints,
   Handshake,
   Map as MapIcon,
@@ -18,6 +19,7 @@ const iconos: Record<string, LucideIcon> = {
   organizador: Megaphone,
   trotamundos: MapIcon,
   critico: Star,
+  racha: Flame,
 }
 
 // Todas las insignias: las ganadas en color; las que faltan, en gris con una

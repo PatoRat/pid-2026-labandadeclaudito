@@ -49,7 +49,7 @@ export default async function PerfilPage() {
             libres. Faltar a un turno resta.
           </p>
           <div className="mt-5 space-y-5">
-            <TarjetaNivel puntos={puntosDelNivel} />
+            <TarjetaNivel puntos={puntosDelNivel} racha={estadisticas.rachaSemanas} />
             <EscaleraDeNiveles puntos={puntosDelNivel} />
             <InsigniasDelJugador estadisticas={estadisticas} />
           </div>

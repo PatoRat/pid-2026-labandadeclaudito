@@ -9,8 +9,9 @@ import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
-import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
-import { penalizacionDe } from '@/lib/tickets'
+import { estadisticasDelJugador, puntosDe } from '@/lib/gamificacion'
+import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { getPenalizacionDeJugadores, penalizacionDe } from '@/lib/tickets'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -38,7 +39,8 @@ export default async function JugadorHomePage() {
     totalComplejos,
     reservasDelSabado,
     partidosAbiertosTodos,
-    puntosPorJugador,
+    partidosPorJugador,
+    penalizacionPorJugador,
     ticketsPendientes,
   ] = await Promise.all([
     db.reserva.findMany({
@@ -71,7 +73,8 @@ export default async function JugadorHomePage() {
       },
     }),
     getPartidosAbiertos(session.user.id),
-    puntosDeJugadores([session.user.id]),
+    getPartidosDeJugadores([session.user.id]),
+    getPenalizacionDeJugadores([session.user.id]),
     // Tickets de penalización que el jugador todavía tiene que responder o
     // apelar. Los resueltos salen del inicio (quedan en el historial del admin).
     db.ticket.findMany({
@@ -80,7 +83,11 @@ export default async function JugadorHomePage() {
     }),
   ])
 
-  const puntos = puntosPorJugador.get(session.user.id) ?? 0
+  // Igual que en el perfil: los puntos del nivel restan la penalización de los
+  // tickets; la racha y las insignias salen de los partidos jugados.
+  const estadisticas = estadisticasDelJugador(partidosPorJugador.get(session.user.id) ?? [])
+  const penalizacion = penalizacionPorJugador.get(session.user.id) ?? 0
+  const puntos = Math.max(0, puntosDe(estadisticas) - penalizacion)
 
   // En el feed se muestran los primeros; el resto se ve en Buscar canchas
   const partidosAbiertos = partidosAbiertosTodos.slice(0, 4)
@@ -258,7 +265,7 @@ export default async function JugadorHomePage() {
         </section>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <TarjetaNivel puntos={puntos} conLink />
+          <TarjetaNivel puntos={puntos} racha={estadisticas.rachaSemanas} conLink />
 
           {/* Un número protagonista y dos de apoyo, en vez de tres tarjetas iguales */}
           <div className="bg-card shadow-card rounded-3xl p-7">

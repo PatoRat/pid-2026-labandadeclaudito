@@ -26,6 +26,8 @@ export type EstadisticasDelJugador = {
   noShows: number
   complejos: number
   calificaciones: number
+  // Semanas seguidas (hasta esta o la pasada) con al menos un partido jugado
+  rachaSemanas: number
 }
 
 export const PUNTOS = {
@@ -49,8 +51,10 @@ export function estadisticasDelJugador(
     noShows: 0,
     complejos: 0,
     calificaciones: 0,
+    rachaSemanas: 0,
   }
   const complejos = new Set<string>()
+  const semanasJugadas = new Set<number>()
 
   for (const partido of partidos) {
     const estado = estadoDeReserva(partido, ahora)
@@ -65,6 +69,7 @@ export function estadisticasDelJugador(
     if (estado !== 'ASISTIO' && estado !== 'FINALIZADA') continue
 
     complejos.add(partido.complejoId)
+    semanasJugadas.add(numeroDeSemana(partido.dia))
 
     // A un amigo lo etiquetaron: jugó el partido, pero no lo reservó ni lo
     // calificó (la calificación es del que reservó o se sumó).
@@ -83,7 +88,32 @@ export function estadisticasDelJugador(
   }
 
   estadisticas.complejos = complejos.size
+  estadisticas.rachaSemanas = rachaDeSemanas(semanasJugadas, numeroDeSemana(ahora.dia))
   return estadisticas
+}
+
+// Número de semana contando desde 1970, con semanas de lunes a domingo.
+// El 1/1/1970 fue jueves: sumando 3 días, cada lunes arranca una semana nueva.
+export function numeroDeSemana(dia: string): number {
+  const [anio, mes, diaDelMes] = dia.split('-').map(Number)
+  const diasDesde1970 = Date.UTC(anio, mes - 1, diaDelMes) / (24 * 60 * 60 * 1000)
+  return Math.floor((diasDesde1970 + 3) / 7)
+}
+
+// Cuántas semanas seguidas jugó, contando para atrás. Si esta semana todavía
+// no jugó, la racha no se corta: se cuenta desde la semana pasada (tiene
+// hasta el domingo para seguirla).
+function rachaDeSemanas(semanasJugadas: Set<number>, semanaActual: number): number {
+  let semana = semanaActual
+  if (!semanasJugadas.has(semana)) {
+    semana = semanaActual - 1
+  }
+  let racha = 0
+  while (semanasJugadas.has(semana)) {
+    racha++
+    semana--
+  }
+  return racha
 }
 
 export function puntosDe(e: EstadisticasDelJugador): number {
@@ -187,6 +217,13 @@ export const INSIGNIAS = [
     descripcion: 'Hiciste 5 calificaciones',
     meta: 5,
     progreso: (e: EstadisticasDelJugador) => e.calificaciones,
+  },
+  {
+    id: 'racha',
+    nombre: 'En racha',
+    descripcion: 'Jugaste 4 semanas seguidas',
+    meta: 4,
+    progreso: (e: EstadisticasDelJugador) => e.rachaSemanas,
   },
 ]
 
