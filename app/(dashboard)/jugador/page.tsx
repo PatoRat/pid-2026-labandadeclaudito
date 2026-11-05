@@ -9,7 +9,7 @@ import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
-import { estadisticasDelJugador, puntosDe } from '@/lib/gamificacion'
+import { estadisticasDelJugador, insigniasGanadas, nivelDe, puntosDe } from '@/lib/gamificacion'
 import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import { getPenalizacionDeJugadores, penalizacionDe } from '@/lib/tickets'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
@@ -21,6 +21,7 @@ import { FilaDeTurno } from '@/components/fila-de-turno'
 import { ProximoTurnoDestacado } from '@/components/proximo-turno-destacado'
 import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
 import { TarjetaNivel } from '@/components/tarjeta-nivel'
+import { FestejoDeLogros } from '@/components/festejo-de-logros'
 import { TicketPendiente } from '@/components/ticket-pendiente'
 
 export default async function JugadorHomePage() {
@@ -117,8 +118,18 @@ export default async function JugadorHomePage() {
     }
   }
 
+  const insigniasDelJugador = insigniasGanadas(estadisticas).map((insignia) => ({
+    id: insignia.id,
+    nombre: insignia.nombre,
+  }))
+
   return (
     <div>
+      <FestejoDeLogros
+        usuarioId={session.user.id}
+        nivel={nivelDe(puntos).actual.nombre}
+        insignias={insigniasDelJugador}
+      />
       <div className="mb-7 flex flex-wrap items-end justify-between gap-5">
         <div>
           <p className="text-muted-foreground text-sm font-medium">{diaEnPalabras(hoy)}</p>
