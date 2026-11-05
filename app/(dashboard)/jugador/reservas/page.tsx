@@ -19,6 +19,7 @@ import { formatPrecio } from '@/lib/labels'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { montoDelHistorial, type MontoDelHistorial } from '@/lib/historial'
 import { estadoDeReserva, sePuedeCalificar, venceLaSena } from '@/lib/estado-reserva'
+import { puntosDelPartido } from '@/lib/gamificacion'
 import { EtiquetarAmigos } from '@/components/etiquetar-amigos'
 import { calcularPagina } from '@/lib/paginacion'
 import { diaEnPalabras } from '@/lib/fechas'
@@ -226,7 +227,20 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
 
           {reservas.length > 0 && vista !== 'proximas' && (
             <div className="bg-card shadow-card overflow-hidden rounded-2xl">
-              <Table>
+              {/* Celular y tablet: tarjetas una debajo de la otra */}
+              <ul className="divide-border divide-y lg:hidden">
+                {reservas.map((reserva) => (
+                  <TarjetaHistorial
+                    key={reserva.id}
+                    reserva={reserva}
+                    ahora={ahora}
+                    conDisputa={vista === 'historial'}
+                    jugadorId={jugadorId}
+                  />
+                ))}
+              </ul>
+              {/* Pantallas grandes: la tabla, que entra entera */}
+              <Table className="hidden lg:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="px-3 pl-4">
@@ -279,19 +293,15 @@ export default async function MisReservasPage({ searchParams }: PageProps<'/juga
   )
 }
 
-// Una fila de la tabla de historial o canceladas. En el historial lleva la
-// disputa: el botón para abrirla, o en qué está la que ya abrió.
-function FilaReserva({
-  reserva,
-  ahora,
-  conDisputa,
-  jugadorId,
-}: {
-  reserva: Reserva
-  ahora: { dia: string; hora: string }
-  conDisputa: boolean
-  jugadorId: string
-}) {
+// Lo que muestra una reserva del historial o de canceladas. Lo usan la fila de
+// la tabla (pantallas grandes) y la tarjeta (celular): así las dos muestran
+// siempre lo mismo.
+function datosDelHistorial(
+  reserva: Reserva,
+  ahora: { dia: string; hora: string },
+  conDisputa: boolean,
+  jugadorId: string,
+) {
   const dia = diaDeReserva(reserva.fecha)
   // Si está en la lista y no sos el creador, es porque te sumaste
   const esParticipante = reserva.jugadorId !== jugadorId
@@ -318,6 +328,19 @@ function FilaReserva({
   // La consulta trae solo la del jugador logueado: hay una o ninguna
   const miCalificacion = reserva.calificaciones[0]
 
+  // Lo que le dio este partido al jugador (se muestra debajo del estado)
+  const puntosDelTurno = puntosDelPartido(
+    {
+      ...turno,
+      propio: !esParticipante,
+      jugadores: reserva.jugadores,
+      complejoId: reserva.cancha.complejoId,
+      calificado: miCalificacion !== undefined,
+      etiquetado: false,
+    },
+    ahora,
+  )
+
   // Etiquetar amigos: solo el que reservó, en una reserva que ya se jugó. No
   // aparece en canceladas (conDisputa marca la vista historial) ni para el que
   // se sumó al partido de otro.
@@ -329,6 +352,154 @@ function FilaReserva({
     nombre: etiqueta.jugador.nombre,
     imagenUrl: etiqueta.jugador.imagenUrl,
   }))
+
+  const puedeCalificar = !miCalificacion && sePuedeCalificar(turno, ahora)
+  // Las disputas son del dueño de la reserva, no del que se sumó
+  const puedeDisputar =
+    !esParticipante &&
+    !reserva.disputa &&
+    sePuedeDisputar({ ...turno, asistenciaMarcadaEn: reserva.asistenciaMarcadaEn }, ahora)
+
+  return {
+    dia,
+    esParticipante,
+    monto,
+    miCalificacion,
+    puntosDelTurno,
+    puedeEtiquetar,
+    etiquetados,
+    puedeCalificar,
+    puedeDisputar,
+  }
+}
+
+// El sello con los puntos que sumó (amarillo) o restó (rojo) el partido
+function PuntosDelTurno({ puntos }: { puntos: number }) {
+  if (puntos > 0) {
+    return (
+      <span className="bg-highlight text-highlight-foreground block w-fit rounded-full px-2 py-0.5 text-xs font-bold">
+        +{puntos} pts
+      </span>
+    )
+  }
+  if (puntos < 0) {
+    return (
+      <span className="bg-destructive/10 text-destructive block w-fit rounded-full px-2 py-0.5 text-xs font-bold">
+        {puntos} pts
+      </span>
+    )
+  }
+  return null
+}
+
+// Calificar y disputar: los botones (o lo que ya hizo) de una reserva del
+// historial. Mismo bloque en la tabla y en la tarjeta del celular.
+function CalificacionDeLaReserva({
+  reserva,
+  datos,
+}: {
+  reserva: Reserva
+  datos: ReturnType<typeof datosDelHistorial>
+}) {
+  if (datos.miCalificacion) {
+    return <PuntajeEnEstrellas puntaje={datos.miCalificacion.puntaje} />
+  }
+  if (datos.puedeCalificar) {
+    return (
+      <RateComplexDialog bookingId={reserva.id} nombreComplejo={reserva.cancha.complejo.nombre} />
+    )
+  }
+  return null
+}
+
+function DisputaDeLaReserva({
+  reserva,
+  datos,
+}: {
+  reserva: Reserva
+  datos: ReturnType<typeof datosDelHistorial>
+}) {
+  if (!datos.esParticipante && reserva.disputa) {
+    return <EstadoDeDisputa disputa={reserva.disputa} vista="JUGADOR" />
+  }
+  if (datos.puedeDisputar) {
+    return <DisputeFormDialog bookingId={reserva.id} />
+  }
+  return null
+}
+
+// La reserva como tarjeta, para celular y tablet: todo a la vista sin deslizar
+// una tabla de costado. Arriba el día y el estado con los puntos; en el medio
+// la cancha; abajo lo que pagó y lo que puede hacer.
+function TarjetaHistorial({
+  reserva,
+  ahora,
+  conDisputa,
+  jugadorId,
+}: {
+  reserva: Reserva
+  ahora: { dia: string; hora: string }
+  conDisputa: boolean
+  jugadorId: string
+}) {
+  const datos = datosDelHistorial(reserva, ahora, conDisputa, jugadorId)
+
+  return (
+    <li className="space-y-3.5 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <FechaDelTurno dia={datos.dia} horaInicio={reserva.horaInicio} horaFin={reserva.horaFin} />
+        <div className="flex flex-col items-end gap-1.5">
+          <BookingStatusBadge
+            estado={reserva.estado}
+            asistio={reserva.asistio}
+            dia={datos.dia}
+            horaInicio={reserva.horaInicio}
+            horaFin={reserva.horaFin}
+            ahoraInicial={ahora}
+          />
+          <PuntosDelTurno puntos={datos.puntosDelTurno} />
+        </div>
+      </div>
+
+      <div className="bg-muted/50 rounded-xl px-3.5 py-3">
+        <CeldaCancha
+          nombre={reserva.cancha.nombre}
+          deporte={reserva.cancha.deporte}
+          complejo={reserva.cancha.complejo.nombre}
+        />
+        {datos.puedeEtiquetar && (
+          <EtiquetarAmigos bookingId={reserva.id} etiquetadosIniciales={datos.etiquetados} />
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <CeldaMonto monto={datos.monto} />
+        {conDisputa && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <CalificacionDeLaReserva reserva={reserva} datos={datos} />
+            <DisputaDeLaReserva reserva={reserva} datos={datos} />
+          </div>
+        )}
+      </div>
+    </li>
+  )
+}
+
+// Una fila de la tabla de historial o canceladas (pantallas grandes). En el
+// historial lleva la calificación y la disputa.
+function FilaReserva({
+  reserva,
+  ahora,
+  conDisputa,
+  jugadorId,
+}: {
+  reserva: Reserva
+  ahora: { dia: string; hora: string }
+  conDisputa: boolean
+  jugadorId: string
+}) {
+  const datos = datosDelHistorial(reserva, ahora, conDisputa, jugadorId)
+  const { dia, monto, puntosDelTurno, puedeEtiquetar, etiquetados } = datos
 
   return (
     <TableRow>
@@ -354,42 +525,21 @@ function FilaReserva({
           horaFin={reserva.horaFin}
           ahoraInicial={ahora}
         />
+        <div className="mt-1.5">
+          <PuntosDelTurno puntos={puntosDelTurno} />
+        </div>
       </TableCell>
       <TableCell className={conDisputa ? 'px-3' : 'px-3 pr-4'}>
         <CeldaMonto monto={monto} />
       </TableCell>
       {conDisputa && (
         <TableCell className="px-3">
-          {miCalificacion ? (
-            <PuntajeEnEstrellas puntaje={miCalificacion.puntaje} />
-          ) : (
-            sePuedeCalificar(turno, ahora) && (
-              <RateComplexDialog
-                bookingId={reserva.id}
-                nombreComplejo={reserva.cancha.complejo.nombre}
-              />
-            )
-          )}
+          <CalificacionDeLaReserva reserva={reserva} datos={datos} />
         </TableCell>
       )}
       {conDisputa && (
         <TableCell className="px-3 pr-4 text-right">
-          {/* Las disputas son del dueño de la reserva, no del que se sumó */}
-          {esParticipante ? null : reserva.disputa ? (
-            <EstadoDeDisputa disputa={reserva.disputa} vista="JUGADOR" />
-          ) : (
-            sePuedeDisputar(
-              {
-                estado: reserva.estado,
-                asistio: reserva.asistio,
-                dia,
-                horaInicio: reserva.horaInicio,
-                horaFin: reserva.horaFin,
-                asistenciaMarcadaEn: reserva.asistenciaMarcadaEn,
-              },
-              ahora,
-            ) && <DisputeFormDialog bookingId={reserva.id} />
-          )}
+          <DisputaDeLaReserva reserva={reserva} datos={datos} />
         </TableCell>
       )}
     </TableRow>

@@ -7,6 +7,7 @@ import type { getPartidosAbiertos } from '@/lib/partidos-abiertos'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
 import { FranjaDeCancha } from '@/components/franja-de-cancha'
 import { JoinBookingDialog } from '@/components/join-booking-dialog'
+import { SelloDeNivel } from '@/components/sello-de-nivel'
 
 type PartidoAbierto = Awaited<ReturnType<typeof getPartidosAbiertos>>[number]
 
@@ -33,9 +34,9 @@ export function TarjetaPartidoAbierto({ reserva }: { reserva: PartidoAbierto }) 
           <Clock className="size-3.5 shrink-0" />
           {reserva.horaInicio} a {reserva.horaFin} hs
         </p>
-        <p className="text-muted-foreground mt-0.5 text-sm">
-          Organiza {reserva.jugador.nombre.split(' ')[0]} ·{' '}
-          <span className="text-foreground font-semibold">{reserva.nivelDelOrganizador}</span>
+        <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+          Organiza {reserva.jugador.nombre.split(' ')[0]}
+          <SelloDeNivel nivel={reserva.nivelDelOrganizador} />
         </p>
         <p className="mt-2 text-sm font-semibold">{reserva.cancha.nombre}</p>
         <p className="text-muted-foreground truncate text-sm">

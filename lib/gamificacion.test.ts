@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
   estadisticasDelJugador,
+  INSIGNIAS,
   insigniasGanadas,
   montoDelDescuento,
   nivelDe,
+  numeroDeSemana,
   puntosDe,
+  puntosDelPartido,
   rankingDelMes,
   type PartidoDelJugador,
 } from './gamificacion'
@@ -227,5 +230,71 @@ describe('descuento de cada nivel', () => {
   test('Suplente no tiene, Leyenda el máximo', () => {
     expect(nivelDe(0).actual.descuento).toBe(0)
     expect(nivelDe(600).actual.descuento).toBe(20)
+  })
+})
+
+describe('progreso de las insignias', () => {
+  function progresoDe(id: string, partidos: PartidoDelJugador[]): number {
+    const insignia = INSIGNIAS.find((i) => i.id === id)
+    if (!insignia) throw new Error(`no existe la insignia ${id}`)
+    return insignia.progreso(estadisticasDelJugador(partidos, ahora))
+  }
+
+  test('Refuerzo cuenta los partidos de otros jugados', () => {
+    const tres = Array.from({ length: 3 }, () => partido({ propio: false }))
+    expect(progresoDe('refuerzo', tres)).toBe(3)
+  })
+
+  test('Palabra de jugador vuelve a cero con un no-show', () => {
+    const cuatro = Array.from({ length: 4 }, () => partido())
+    expect(progresoDe('palabra', cuatro)).toBe(4)
+    expect(progresoDe('palabra', [...cuatro, partido({ asistio: false })])).toBe(0)
+  })
+})
+
+describe('puntosDelPartido', () => {
+  test('un partido propio calificado suma 13', () => {
+    expect(puntosDelPartido(partido({ calificado: true }), ahora)).toBe(13)
+  })
+
+  test('un no-show resta 20', () => {
+    expect(puntosDelPartido(partido({ asistio: false }), ahora)).toBe(-20)
+  })
+
+  test('un partido que todavía no se jugó no suma', () => {
+    expect(puntosDelPartido(partido({ dia: '2026-11-10' }), ahora)).toBe(0)
+  })
+})
+
+describe('racha de semanas', () => {
+  function racha(partidos: PartidoDelJugador[]): number {
+    return estadisticasDelJugador(partidos, ahora).rachaSemanas
+  }
+
+  test('lunes y domingo son de la misma semana; el lunes siguiente, de otra', () => {
+    expect(numeroDeSemana('2026-11-02')).toBe(numeroDeSemana('2026-11-08'))
+    expect(numeroDeSemana('2026-11-09')).toBe(numeroDeSemana('2026-11-08') + 1)
+  })
+
+  test('tres semanas seguidas jugando dan racha de 3', () => {
+    // ahora es jueves 5/11: esta semana, la anterior y la otra
+    const partidos = [
+      partido({ dia: '2026-11-02' }),
+      partido({ dia: '2026-10-28' }),
+      partido({ dia: '2026-10-20' }),
+    ]
+    expect(racha(partidos)).toBe(3)
+  })
+
+  test('si esta semana todavía no jugó, la racha sigue desde la pasada', () => {
+    expect(racha([partido({ dia: '2026-10-28' }), partido({ dia: '2026-10-20' })])).toBe(2)
+  })
+
+  test('una semana sin jugar corta la racha', () => {
+    expect(racha([partido({ dia: '2026-11-02' }), partido({ dia: '2026-10-20' })])).toBe(1)
+  })
+
+  test('un partido que todavía no se jugó no cuenta', () => {
+    expect(racha([partido({ dia: '2026-11-10' })])).toBe(0)
   })
 })

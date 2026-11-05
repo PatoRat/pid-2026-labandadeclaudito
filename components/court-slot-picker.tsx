@@ -25,7 +25,7 @@ import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { diaEnPalabras } from '@/lib/fechas'
 import { jugadoresFaltantes, textoCupo, textoJugadoresFaltantes } from '@/lib/jugadores'
 import { formatPrecio, mesesCortos, nombresCortosDeDias } from '@/lib/labels'
-import { montoDelDescuento, type Nivel } from '@/lib/gamificacion'
+import { montoDelDescuento, nivelDe, PUNTOS } from '@/lib/gamificacion'
 import { diaDeHoy, diasParaReservar, formatAdvanceTime } from '@/lib/time'
 
 type Slot = {
@@ -59,7 +59,7 @@ export function CourtSlotPicker({
   capacidad,
   precioBase,
   fechaInicial,
-  nivel,
+  puntos,
 }: {
   courtId: string
   courtName: string
@@ -67,8 +67,9 @@ export function CourtSlotPicker({
   capacidad: number
   precioBase: string
   fechaInicial?: string
-  // Nivel del jugador: su % de descuento se muestra en el desglose
-  nivel: Nivel
+  // Puntos del jugador: de ahí sale su nivel (el % de beneficio del desglose)
+  // y cuánto le falta para el siguiente
+  puntos: number
 }) {
   const maxJugadores = capacidad
   // fechaInicial viene como YYYY-MM-DD de la búsqueda. Se arma con parse (fecha
@@ -200,6 +201,13 @@ export function CourtSlotPicker({
   const montoSenaSeleccionada = slotSeleccionado
     ? (Number(slotSeleccionado.precio) * porcentajeSena) / 100
     : 0
+  const { actual: nivel, siguiente: nivelSiguiente } = nivelDe(puntos)
+  // Lo que suma este partido cuando se juegue: publicarlo con cupos libres
+  // suma un extra (mismas reglas que lib/gamificacion.ts)
+  const puntosQueSuma = completa ? PUNTOS.jugado : PUNTOS.jugado + PUNTOS.abierto
+  const llegaAlSiguienteNivel =
+    nivelSiguiente !== null && puntos + puntosQueSuma >= nivelSiguiente.desde
+
   // Misma cuenta que hace el server al crear la reserva
   const descuentoSeleccionado = slotSeleccionado
     ? montoDelDescuento(Number(slotSeleccionado.precio), nivel.descuento, porcentajeSena)
@@ -506,8 +514,8 @@ export function CourtSlotPicker({
                 {descuentoSeleccionado > 0 && (
                   <p className="flex justify-between gap-3">
                     <span>
-                      Descuento {nivel.nombre} ({nivel.descuento}%)
-                      <span className="text-muted-foreground"> · lo paga TocaYJuga</span>
+                      Beneficio de tu nivel {nivel.nombre}
+                      <span className="text-muted-foreground"> ({nivel.descuento}%)</span>
                     </span>
                     <span className="text-primary font-semibold">
                       −{formatPrecio(descuentoSeleccionado)}
@@ -566,6 +574,33 @@ export function CourtSlotPicker({
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Lo que gana con este partido: une la reserva con el nivel */}
+              <div className="bg-highlight/30 flex items-center gap-3 rounded-2xl p-3.5">
+                <span className="bg-highlight text-highlight-foreground font-heading flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-extrabold">
+                  +{puntosQueSuma}
+                </span>
+                <div className="min-w-0 text-sm">
+                  <p className="font-semibold">
+                    Al jugarlo sumás {puntosQueSuma} puntos
+                    {!completa && (
+                      <span className="text-muted-foreground font-normal">
+                        {' '}
+                        (+{PUNTOS.abierto} por buscar jugadores)
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {nivelSiguiente === null && 'Ya sos Leyenda, el nivel máximo.'}
+                    {nivelSiguiente !== null &&
+                      llegaAlSiguienteNivel &&
+                      `¡Con este partido llegás a ${nivelSiguiente.nombre} y ganás ${nivelSiguiente.descuento}% de beneficio!`}
+                    {nivelSiguiente !== null &&
+                      !llegaAlSiguienteNivel &&
+                      `Te faltan ${nivelSiguiente.desde - puntos} para ${nivelSiguiente.nombre} (${nivelSiguiente.descuento}% de beneficio).`}
+                  </p>
+                </div>
               </div>
 
               <Button size="lg" onClick={reservar} disabled={estado === 'reservando'}>

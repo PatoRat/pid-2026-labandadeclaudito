@@ -26,6 +26,8 @@ export type EstadisticasDelJugador = {
   noShows: number
   complejos: number
   calificaciones: number
+  // Semanas seguidas (hasta esta o la pasada) con al menos un partido jugado
+  rachaSemanas: number
 }
 
 export const PUNTOS = {
@@ -49,8 +51,10 @@ export function estadisticasDelJugador(
     noShows: 0,
     complejos: 0,
     calificaciones: 0,
+    rachaSemanas: 0,
   }
   const complejos = new Set<string>()
+  const semanasJugadas = new Set<number>()
 
   for (const partido of partidos) {
     const estado = estadoDeReserva(partido, ahora)
@@ -65,6 +69,7 @@ export function estadisticasDelJugador(
     if (estado !== 'ASISTIO' && estado !== 'FINALIZADA') continue
 
     complejos.add(partido.complejoId)
+    semanasJugadas.add(numeroDeSemana(partido.dia))
 
     // A un amigo lo etiquetaron: jugó el partido, pero no lo reservó ni lo
     // calificó (la calificación es del que reservó o se sumó).
@@ -83,7 +88,32 @@ export function estadisticasDelJugador(
   }
 
   estadisticas.complejos = complejos.size
+  estadisticas.rachaSemanas = rachaDeSemanas(semanasJugadas, numeroDeSemana(ahora.dia))
   return estadisticas
+}
+
+// Número de semana contando desde 1970, con semanas de lunes a domingo.
+// El 1/1/1970 fue jueves: sumando 3 días, cada lunes arranca una semana nueva.
+export function numeroDeSemana(dia: string): number {
+  const [anio, mes, diaDelMes] = dia.split('-').map(Number)
+  const diasDesde1970 = Date.UTC(anio, mes - 1, diaDelMes) / (24 * 60 * 60 * 1000)
+  return Math.floor((diasDesde1970 + 3) / 7)
+}
+
+// Cuántas semanas seguidas jugó, contando para atrás. Si esta semana todavía
+// no jugó, la racha no se corta: se cuenta desde la semana pasada (tiene
+// hasta el domingo para seguirla).
+function rachaDeSemanas(semanasJugadas: Set<number>, semanaActual: number): number {
+  let semana = semanaActual
+  if (!semanasJugadas.has(semana)) {
+    semana = semanaActual - 1
+  }
+  let racha = 0
+  while (semanasJugadas.has(semana)) {
+    racha++
+    semana--
+  }
+  return racha
 }
 
 export function puntosDe(e: EstadisticasDelJugador): number {
@@ -140,48 +170,67 @@ export function montoDelDescuento(
   return Math.round(Math.min(descuento, enLaCancha) * 100) / 100
 }
 
+// Cada insignia tiene una meta y cuánto lleva el jugador hacia ella
+// (progreso). Se gana cuando el progreso llega a la meta. El progreso se
+// muestra como "3/5" en las que todavía no ganó.
 export const INSIGNIAS = [
   {
     id: 'debut',
     nombre: 'Debut',
     descripcion: 'Jugaste tu primer partido',
-    ganada: (e: EstadisticasDelJugador) => e.jugadosPropios + e.jugadosSumado >= 1,
+    meta: 1,
+    progreso: (e: EstadisticasDelJugador) => e.jugadosPropios + e.jugadosSumado,
   },
   {
     id: 'palabra',
     nombre: 'Palabra de jugador',
     descripcion: 'Jugaste 10 partidos sin faltar a ninguno',
-    ganada: (e: EstadisticasDelJugador) =>
-      e.jugadosPropios + e.jugadosSumado >= 10 && e.noShows === 0,
+    meta: 10,
+    // Faltar una vez la deja en cero: la gracia es no haber faltado nunca
+    progreso: (e: EstadisticasDelJugador) =>
+      e.noShows > 0 ? 0 : e.jugadosPropios + e.jugadosSumado,
   },
   {
     id: 'refuerzo',
     nombre: 'Refuerzo',
     descripcion: 'Te sumaste a 5 partidos de otros jugadores',
-    ganada: (e: EstadisticasDelJugador) => e.jugadosSumado >= 5,
+    meta: 5,
+    progreso: (e: EstadisticasDelJugador) => e.jugadosSumado,
   },
   {
     id: 'organizador',
     nombre: 'Organizador',
     descripcion: 'Publicaste 3 partidos con cupos libres',
-    ganada: (e: EstadisticasDelJugador) => e.abiertosJugados >= 3,
+    meta: 3,
+    progreso: (e: EstadisticasDelJugador) => e.abiertosJugados,
   },
   {
     id: 'trotamundos',
     nombre: 'Trotamundos',
     descripcion: 'Jugaste en 3 complejos distintos',
-    ganada: (e: EstadisticasDelJugador) => e.complejos >= 3,
+    meta: 3,
+    progreso: (e: EstadisticasDelJugador) => e.complejos,
   },
   {
     id: 'critico',
     nombre: 'Crítico',
     descripcion: 'Hiciste 5 calificaciones',
-    ganada: (e: EstadisticasDelJugador) => e.calificaciones >= 5,
+    meta: 5,
+    progreso: (e: EstadisticasDelJugador) => e.calificaciones,
+  },
+  {
+    id: 'racha',
+    nombre: 'En racha',
+    descripcion: 'Jugaste 4 semanas seguidas',
+    meta: 4,
+    progreso: (e: EstadisticasDelJugador) => e.rachaSemanas,
   },
 ]
 
+export type Insignia = (typeof INSIGNIAS)[number]
+
 export function insigniasGanadas(e: EstadisticasDelJugador) {
-  return INSIGNIAS.filter((insignia) => insignia.ganada(e))
+  return INSIGNIAS.filter((insignia) => insignia.progreso(e) >= insignia.meta)
 }
 
 export type FilaDelRanking = {
@@ -220,6 +269,13 @@ export function rankingDelMes(
   return filas
     .filter((fila) => fila.puntosDelMes > 0)
     .sort((a, b) => b.puntosDelMes - a.puntosDelMes || a.nombre.localeCompare(b.nombre))
+}
+
+// Lo que sumó (o restó) un solo partido: mismas reglas que el total, así el
+// "+15 pts" de cada fila del historial siempre cierra con el total del perfil.
+// 0 si todavía no se jugó o se canceló.
+export function puntosDelPartido(partido: PartidoDelJugador, ahora = momentoActual()): number {
+  return puntosDe(estadisticasDelJugador([partido], ahora))
 }
 
 // Atajo para el caso más común: los puntos de una lista de partidos, hoy

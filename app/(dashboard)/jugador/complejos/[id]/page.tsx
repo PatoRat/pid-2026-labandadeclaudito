@@ -7,6 +7,8 @@ import { iniciales } from '@/lib/iniciales'
 import { haceCuanto } from '@/lib/fechas'
 import { momentoActual } from '@/lib/time'
 import { PuntajeEnEstrellas } from '@/components/puntaje-en-estrellas'
+import { SelloDeNivel } from '@/components/sello-de-nivel'
+import { nivelDe } from '@/lib/gamificacion'
 import { getComplexDetail, filtersToQueryString } from '@/lib/court-search'
 import { searchCourtsSchema } from '@/lib/validations/court-search'
 import { deportesDistintos } from '@/lib/resumen-complejo'
@@ -17,7 +19,6 @@ import {
   type BloqueoDelDia,
 } from '@/lib/blocks'
 import { diaEnPalabras } from '@/lib/fechas'
-import { nivelDe } from '@/lib/gamificacion'
 import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
 import { CourtCard } from '@/components/court-card'
 import { ComplexGallery } from '@/components/complex-gallery'
@@ -52,14 +53,22 @@ export default async function ComplejoDetallePage({
   ])
   if (!complejo) notFound()
 
+  // El nivel de cada uno que opinó, para el sello al lado del nombre: le da
+  // peso a la opinión de un jugador que juega seguido
+  const idsDeLosQueOpinaron: string[] = []
+  for (const opinion of opiniones) {
+    idsDeLosQueOpinaron.push(opinion.jugadorId)
+  }
+  const puntosDeLosQueOpinaron = await puntosDeJugadores(idsDeLosQueOpinaron)
+
   const cantidadCalificaciones = resumenCalificaciones._count._all
   const promedio = resumenCalificaciones._avg.puntaje ?? 0
   // Con coma decimal, como se escribe acá: 4,3
   const promedioEnTexto = promedio.toFixed(1).replace('.', ',')
 
-  // El nivel define el descuento que se muestra al reservar (el server lo
-  // vuelve a calcular al crear la reserva: no se confía en este)
-  const { actual: nivel } = nivelDe(puntosPorJugador.get(session.user.id) ?? 0)
+  // Los puntos definen el nivel y el beneficio que se muestran al reservar (el
+  // server lo vuelve a calcular al crear la reserva: no se confía en este)
+  const puntos = puntosPorJugador.get(session.user.id) ?? 0
 
   // Una cancha puede tener su propio porcentaje de seña: el número se muestra
   // solo si es el mismo en todas.
@@ -176,7 +185,7 @@ export default async function ComplejoDetallePage({
                     cancha={cancha}
                     fechaInicial={filtros.fecha}
                     bloqueo={textoBloqueo}
-                    nivel={nivel}
+                    puntos={puntos}
                   />
                 )
               })}
@@ -186,7 +195,7 @@ export default async function ComplejoDetallePage({
           {opiniones.length > 0 && (
             <>
               <h2 className="font-heading mt-9 mb-3.5 px-1 text-xl font-bold">
-                Lo que dicen los jugadores
+                Opiniones de los jugadores del complejo
               </h2>
               <div className="space-y-3.5">
                 {opiniones.map((opinion) => (
@@ -197,8 +206,14 @@ export default async function ComplejoDetallePage({
                       </span>
                       <div className="min-w-0 flex-1">
                         {/* Solo el nombre de pila: no hace falta mostrar el apellido */}
-                        <p className="truncate font-semibold">
-                          {opinion.jugador.nombre.split(' ')[0]}
+                        <p className="flex items-center gap-2 font-semibold">
+                          <span className="truncate">{opinion.jugador.nombre.split(' ')[0]}</span>
+                          <SelloDeNivel
+                            nivel={
+                              nivelDe(puntosDeLosQueOpinaron.get(opinion.jugadorId) ?? 0).actual
+                                .nombre
+                            }
+                          />
                         </p>
                         <p className="text-muted-foreground text-sm">
                           {haceCuanto(momentoActual(opinion.createdAt).dia)}

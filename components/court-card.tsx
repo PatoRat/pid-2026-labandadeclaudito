@@ -1,6 +1,5 @@
 import { Clock } from 'lucide-react'
 import type { CourtWithPrice } from '@/lib/court-search'
-import type { Nivel } from '@/lib/gamificacion'
 import { deporteLabels, formatPrecio, superficieLabels } from '@/lib/labels'
 import { CourtBookingSheet } from '@/components/court-booking-sheet'
 import { colorPorDeporte } from '@/components/etiqueta-deporte'
@@ -17,12 +16,13 @@ export function CourtCard({
   cancha,
   fechaInicial,
   bloqueo,
-  nivel,
+  puntos,
 }: {
   cancha: CourtWithPrice
   fechaInicial?: string
   bloqueo?: string
-  nivel: Nivel
+  // Puntos del jugador: de ahí salen su nivel y su beneficio al reservar
+  puntos: number
 }) {
   return (
     <div
@@ -91,7 +91,7 @@ export function CourtCard({
             duracionTurnoMin={cancha.duracionTurnoMin}
             fechaInicial={cancha.bloqueadaTodoElDia ? undefined : fechaInicial}
             otroDia={cancha.bloqueadaTodoElDia}
-            nivel={nivel}
+            puntos={puntos}
           />
         </div>
       </div>

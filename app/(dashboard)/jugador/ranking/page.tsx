@@ -10,6 +10,7 @@ import { iniciales } from '@/lib/iniciales'
 import { nombresDeMeses } from '@/lib/labels'
 import { momentoActual } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { SelloDeNivel } from '@/components/sello-de-nivel'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -109,9 +110,9 @@ export default async function RankingPage() {
                         {nombreCorto(fila.nombre)}
                         {soyYo && <span className="text-muted-foreground font-normal"> (vos)</span>}
                       </p>
-                      <p className="text-muted-foreground text-sm">
-                        {nivelConPenalizacion(fila.id, fila.puntosTotales)}
-                      </p>
+                      <div className="mt-0.5">
+                        <SelloDeNivel nivel={nivelConPenalizacion(fila.id, fila.puntosTotales)} />
+                      </div>
                     </div>
                     <p className="font-heading text-primary shrink-0 text-lg font-bold">
                       {fila.puntosDelMes} pts
@@ -128,13 +129,23 @@ export default async function RankingPage() {
             <p className="text-muted-foreground text-sm font-semibold">Tu posición</p>
             {yo ? (
               <>
-                <p className="font-heading text-primary mt-1.5 text-7xl font-extrabold tracking-tighter">
-                  #{miPosicion + 1}
-                </p>
-                <p className="mt-1 font-semibold">
-                  {yo.puntosDelMes} puntos este mes · de {ranking.length}{' '}
-                  {ranking.length === 1 ? 'jugador' : 'jugadores'}
-                </p>
+                <div className="mt-1.5 flex items-baseline gap-2.5">
+                  <span className="font-heading text-primary text-7xl font-extrabold tracking-tighter">
+                    #{miPosicion + 1}
+                  </span>
+                  <span className="text-muted-foreground font-semibold">
+                    de {ranking.length} {ranking.length === 1 ? 'jugador' : 'jugadores'}
+                  </span>
+                </div>
+                <p className="mt-1 font-semibold">{yo.puntosDelMes} puntos este mes</p>
+                {/* El de arriba: cuánto falta para pasarlo (con los mismos
+                    puntos queda abajo por nombre, así que hace falta uno más) */}
+                {miPosicion > 0 && (
+                  <p className="bg-highlight/30 mt-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold">
+                    Te faltan {ranking[miPosicion - 1].puntosDelMes - yo.puntosDelMes + 1} pts para
+                    pasar a {nombreCorto(ranking[miPosicion - 1].nombre)}
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-1.5 font-semibold">Todavía no sumaste puntos este mes.</p>

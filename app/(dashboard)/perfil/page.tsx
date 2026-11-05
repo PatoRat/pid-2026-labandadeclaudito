@@ -3,9 +3,10 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { PerfilForm } from '@/components/perfil-form'
 import { TarjetaNivel } from '@/components/tarjeta-nivel'
+import { EscaleraDeNiveles } from '@/components/escalera-de-niveles'
 import { InsigniasDelJugador } from '@/components/insignias-del-jugador'
 import { homePorRol } from '@/lib/home-por-rol'
-import { estadisticasDelJugador, insigniasGanadas, puntosDe } from '@/lib/gamificacion'
+import { estadisticasDelJugador, puntosDe } from '@/lib/gamificacion'
 import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import { getPenalizacionDeJugadores } from '@/lib/tickets'
 
@@ -36,11 +37,7 @@ export default async function PerfilPage() {
 
   return (
     <main>
-      <h1 className="font-heading text-4xl font-bold tracking-tight">Mi perfil</h1>
-      <p className="text-muted-foreground mt-1">
-        Cambiá tus datos y tu foto. Así te ven en TocaYJuga.
-      </p>
-      <div className="mt-6 max-w-3xl">
+      <div className="max-w-3xl">
         <PerfilForm usuario={usuario} volverA={homePorRol(session.user.rol)} />
       </div>
 
@@ -52,8 +49,9 @@ export default async function PerfilPage() {
             libres. Faltar a un turno resta.
           </p>
           <div className="mt-5 space-y-5">
-            <TarjetaNivel puntos={puntosDelNivel} />
-            <InsigniasDelJugador ganadas={insigniasGanadas(estadisticas).map((i) => i.id)} />
+            <TarjetaNivel puntos={puntosDelNivel} racha={estadisticas.rachaSemanas} />
+            <EscaleraDeNiveles puntos={puntosDelNivel} />
+            <InsigniasDelJugador estadisticas={estadisticas} />
           </div>
         </section>
       )}

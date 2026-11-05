@@ -1,5 +1,7 @@
-import { Star } from 'lucide-react'
+import { Estrella } from '@/components/estrella'
 import type { ResumenCalificacion } from '@/lib/calificaciones'
+
+const POSICIONES = [1, 2, 3, 4, 5]
 
 // Muestra el promedio de estrellas de un complejo y entre cuántas opiniones sale.
 // Si el complejo no tiene ninguna calificación, se avisa con texto en vez de
@@ -10,27 +12,24 @@ export function Estrellas({ promedio, cantidad }: ResumenCalificacion) {
     return <span className="text-muted-foreground text-xs">Sin calificaciones</span>
   }
 
-  // Cuántas de las 5 estrellas se dibujan rellenas: se redondea para abajo, así
-  // un promedio menor a 2 muestra 1 estrella, menor a 3 muestra 2, etc.
-  const estrellasLlenas = Math.floor(promedio)
-  const estrellas = [1, 2, 3, 4, 5]
-
   return (
     <div className="flex items-center gap-1.5">
-      <div className="flex items-center gap-0.5">
-        {estrellas.map((posicion) => (
-          <Star
-            key={posicion}
-            className={
-              posicion <= estrellasLlenas
-                ? 'fill-highlight text-highlight size-3.5'
-                : 'text-muted-foreground/40 size-3.5'
-            }
-          />
-        ))}
-      </div>
-      <span className="text-sm font-medium">{promedio.toFixed(1).replace('.', ',')}</span>
-      <span className="text-muted-foreground text-xs">({cantidad})</span>
+      <span
+        className="flex items-center gap-0.5"
+        aria-label={`${promedio.toFixed(1)} de 5 estrellas`}
+      >
+        {POSICIONES.map((posicion) => {
+          // Con un promedio de 3,6: las 3 primeras llenas, la 4ª al 60% y la 5ª vacía
+          const relleno = promedio - (posicion - 1)
+          return <Estrella key={posicion} relleno={relleno} tamanio="size-4" />
+        })}
+      </span>
+      <span className="font-heading text-sm font-bold">
+        {promedio.toFixed(1).replace('.', ',')}
+      </span>
+      <span className="text-muted-foreground text-xs">
+        ({cantidad} {cantidad === 1 ? 'opinión' : 'opiniones'})
+      </span>
     </div>
   )
 }
