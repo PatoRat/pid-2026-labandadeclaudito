@@ -175,7 +175,7 @@ export const INSIGNIAS = [
   {
     id: 'critico',
     nombre: 'Crítico',
-    descripcion: 'Calificaste 5 complejos',
+    descripcion: 'Hiciste 5 calificaciones',
     ganada: (e: EstadisticasDelJugador) => e.calificaciones >= 5,
   },
 ]
