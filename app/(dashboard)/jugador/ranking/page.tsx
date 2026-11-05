@@ -10,6 +10,7 @@ import { iniciales } from '@/lib/iniciales'
 import { nombresDeMeses } from '@/lib/labels'
 import { momentoActual } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { SelloDeNivel } from '@/components/sello-de-nivel'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -109,9 +110,9 @@ export default async function RankingPage() {
                         {nombreCorto(fila.nombre)}
                         {soyYo && <span className="text-muted-foreground font-normal"> (vos)</span>}
                       </p>
-                      <p className="text-muted-foreground text-sm">
-                        {nivelConPenalizacion(fila.id, fila.puntosTotales)}
-                      </p>
+                      <div className="mt-0.5">
+                        <SelloDeNivel nivel={nivelConPenalizacion(fila.id, fila.puntosTotales)} />
+                      </div>
                     </div>
                     <p className="font-heading text-primary shrink-0 text-lg font-bold">
                       {fila.puntosDelMes} pts

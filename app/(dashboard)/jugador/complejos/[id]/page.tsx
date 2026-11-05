@@ -7,6 +7,8 @@ import { iniciales } from '@/lib/iniciales'
 import { haceCuanto } from '@/lib/fechas'
 import { momentoActual } from '@/lib/time'
 import { PuntajeEnEstrellas } from '@/components/puntaje-en-estrellas'
+import { SelloDeNivel } from '@/components/sello-de-nivel'
+import { nivelDe } from '@/lib/gamificacion'
 import { getComplexDetail, filtersToQueryString } from '@/lib/court-search'
 import { searchCourtsSchema } from '@/lib/validations/court-search'
 import { deportesDistintos } from '@/lib/resumen-complejo'
@@ -50,6 +52,14 @@ export default async function ComplejoDetallePage({
     }),
   ])
   if (!complejo) notFound()
+
+  // El nivel de cada uno que opinó, para el sello al lado del nombre: le da
+  // peso a la opinión de un jugador que juega seguido
+  const idsDeLosQueOpinaron: string[] = []
+  for (const opinion of opiniones) {
+    idsDeLosQueOpinaron.push(opinion.jugadorId)
+  }
+  const puntosDeLosQueOpinaron = await puntosDeJugadores(idsDeLosQueOpinaron)
 
   const cantidadCalificaciones = resumenCalificaciones._count._all
   const promedio = resumenCalificaciones._avg.puntaje ?? 0
@@ -196,8 +206,14 @@ export default async function ComplejoDetallePage({
                       </span>
                       <div className="min-w-0 flex-1">
                         {/* Solo el nombre de pila: no hace falta mostrar el apellido */}
-                        <p className="truncate font-semibold">
-                          {opinion.jugador.nombre.split(' ')[0]}
+                        <p className="flex items-center gap-2 font-semibold">
+                          <span className="truncate">{opinion.jugador.nombre.split(' ')[0]}</span>
+                          <SelloDeNivel
+                            nivel={
+                              nivelDe(puntosDeLosQueOpinaron.get(opinion.jugadorId) ?? 0).actual
+                                .nombre
+                            }
+                          />
                         </p>
                         <p className="text-muted-foreground text-sm">
                           {haceCuanto(momentoActual(opinion.createdAt).dia)}
