@@ -25,7 +25,7 @@ type Festejo = {
 
 // Colores del papel picado: los de la paleta (sin hex escritos a mano)
 const COLORES_CONFETI = ['bg-highlight', 'bg-primary', 'bg-clay', 'bg-sidebar']
-const CANTIDAD_CONFETI = 48
+const CANTIDAD_CONFETI = 64
 
 // Festeja cuando el jugador sube de nivel o gana una insignia. Lo que ya vio
 // se guarda en el navegador (localStorage): si al entrar tiene algo nuevo
@@ -108,8 +108,8 @@ export function FestejoDeLogros({
         className={`animate-confeti absolute -top-4 block h-3 w-2 rounded-xs ${COLORES_CONFETI[i % COLORES_CONFETI.length]}`}
         style={{
           left: `${(i * 37) % 100}%`,
-          animationDelay: `${(i % 12) * 0.12}s`,
-          animationDuration: `${2.4 + (i % 5) * 0.4}s`,
+          animationDelay: `${(i % 16) * 0.15}s`,
+          animationDuration: `${3.2 + (i % 6) * 0.45}s`,
         }}
       />,
     )
@@ -124,7 +124,7 @@ export function FestejoDeLogros({
         {confeti}
       </div>
       <DialogContent className="overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>
-        <div className="fondo-cancha text-primary-foreground relative flex flex-col items-center px-6 pt-9 pb-7 text-center">
+        <div className="fondo-cancha tema-futbol text-acento-foreground relative flex flex-col items-center px-6 pt-9 pb-7 text-center">
           {/* Rayos de luz girando detrás del trofeo */}
           <span
             aria-hidden
@@ -142,7 +142,7 @@ export function FestejoDeLogros({
           <DialogTitle className="font-heading mt-5 text-3xl font-extrabold tracking-tight">
             {nivelNuevo ? `¡Subiste a ${nivelNuevo}!` : '¡Ganaste una insignia!'}
           </DialogTitle>
-          <DialogDescription className="text-primary-foreground/85 mt-1.5 text-base">
+          <DialogDescription className="text-acento-foreground/85 mt-1.5 text-base">
             {nivelInfo && nivelInfo.descuento > 0
               ? `Ahora tenés ${nivelInfo.descuento}% de beneficio en cada reserva.`
               : 'Seguí jugando para sumar más.'}
