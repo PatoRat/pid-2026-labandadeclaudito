@@ -10,7 +10,7 @@ export function EscaleraDeNiveles({ puntos }: { puntos: number }) {
   const posicionActual = NIVELES.indexOf(actual)
 
   return (
-    <ol className="grid gap-2.5 sm:grid-cols-5">
+    <ol className="grid gap-2.5 lg:grid-cols-5">
       {NIVELES.map((nivel, posicion) => {
         const esActual = posicion === posicionActual
         const yaPaso = posicion < posicionActual
@@ -23,7 +23,7 @@ export function EscaleraDeNiveles({ puntos }: { puntos: number }) {
           <li
             key={nivel.nombre}
             className={cn(
-              'flex items-center gap-3 rounded-2xl p-3.5 sm:flex-col sm:items-start sm:gap-2',
+              'flex items-center gap-3 rounded-2xl p-3.5 lg:flex-col lg:items-start lg:gap-2',
               esActual && 'bg-sidebar text-sidebar-foreground shadow-card',
               yaPaso && 'bg-card shadow-card',
               !esActual && !yaPaso && 'bg-muted/60 text-muted-foreground',
@@ -52,7 +52,7 @@ export function EscaleraDeNiveles({ puntos }: { puntos: number }) {
             </div>
             <span
               className={cn(
-                'rounded-full px-2 py-0.5 text-xs font-semibold',
+                'rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap',
                 esActual ? 'bg-highlight text-highlight-foreground' : 'bg-background',
               )}
             >
