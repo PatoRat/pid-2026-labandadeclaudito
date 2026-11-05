@@ -39,7 +39,10 @@ export function BottomNav({
   const home = homePorRol(rol)
 
   return (
-    <nav className="bg-sidebar text-sidebar-foreground fixed inset-x-0 bottom-0 z-40 flex items-stretch rounded-t-3xl pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.15)] landscape:hidden">
+    // overflow-x-auto + un piso de ancho por tab (min-w): cuando los tabs entran,
+    // flex-1 los estira a lo ancho; cuando no (ej. el admin con más opciones), en
+    // vez de apretarse la barra se desliza de izquierda a derecha.
+    <nav className="bg-sidebar text-sidebar-foreground scrollbar-none fixed inset-x-0 bottom-0 z-40 flex items-stretch overflow-x-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.15)] landscape:hidden">
       {items.map((item) => {
         const activo = esElItemActivo(item.href, pathname, home)
         return (
@@ -47,7 +50,7 @@ export function BottomNav({
             key={item.href}
             href={item.href}
             className={
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs [&_svg]:size-5 ' +
+              'flex min-w-[4.5rem] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs [&_svg]:size-5 ' +
               (activo ? 'text-sidebar-primary font-semibold' : 'text-sidebar-foreground/70')
             }
           >
@@ -59,7 +62,7 @@ export function BottomNav({
 
       {/* Tab extra "Cuenta": abre el panel con perfil, tema y cerrar sesión. */}
       <Sheet>
-        <SheetTrigger className="text-sidebar-foreground/70 flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs [&_svg]:size-5">
+        <SheetTrigger className="text-sidebar-foreground/70 flex min-w-[4.5rem] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs [&_svg]:size-5">
           <UserRound />
           <span>Cuenta</span>
         </SheetTrigger>

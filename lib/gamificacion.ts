@@ -14,11 +14,14 @@ export type PartidoDelJugador = ReservaParaEstado & {
   complejoId: string
   // El jugador ya calificó el complejo por este turno
   calificado: boolean
+  // Un amigo lo etiquetó en esta reserva finalizada (no la reservó ni se sumó)
+  etiquetado: boolean
 }
 
 export type EstadisticasDelJugador = {
   jugadosPropios: number
   jugadosSumado: number
+  jugadosEtiquetado: number
   abiertosJugados: number
   noShows: number
   complejos: number
@@ -28,6 +31,7 @@ export type EstadisticasDelJugador = {
 export const PUNTOS = {
   jugado: 10,
   sumado: 15,
+  etiquetado: 10,
   abierto: 5,
   calificar: 3,
   noShow: -20,
@@ -40,6 +44,7 @@ export function estadisticasDelJugador(
   const estadisticas = {
     jugadosPropios: 0,
     jugadosSumado: 0,
+    jugadosEtiquetado: 0,
     abiertosJugados: 0,
     noShows: 0,
     complejos: 0,
@@ -60,6 +65,14 @@ export function estadisticasDelJugador(
     if (estado !== 'ASISTIO' && estado !== 'FINALIZADA') continue
 
     complejos.add(partido.complejoId)
+
+    // A un amigo lo etiquetaron: jugó el partido, pero no lo reservó ni lo
+    // calificó (la calificación es del que reservó o se sumó).
+    if (partido.etiquetado) {
+      estadisticas.jugadosEtiquetado++
+      continue
+    }
+
     if (partido.calificado) estadisticas.calificaciones++
     if (!partido.propio) {
       estadisticas.jugadosSumado++
@@ -77,6 +90,7 @@ export function puntosDe(e: EstadisticasDelJugador): number {
   return (
     e.jugadosPropios * PUNTOS.jugado +
     e.jugadosSumado * PUNTOS.sumado +
+    e.jugadosEtiquetado * PUNTOS.etiquetado +
     e.abiertosJugados * PUNTOS.abierto +
     e.calificaciones * PUNTOS.calificar +
     e.noShows * PUNTOS.noShow
@@ -180,20 +194,25 @@ export type FilaDelRanking = {
 // Ranking del mes en curso: cuenta solo los partidos de este mes, así alguien
 // nuevo puede llegar arriba. Los que no sumaron este mes no aparecen. Con los
 // mismos puntos, por nombre (el orden no cambia entre recargas).
+// penalizacionDelMes: la penalización de los tickets que el admin creó este mes,
+// por jugador. Se resta al puntaje mensual (la penalización pertenece al mes del
+// ticket). Vacío = sin penalizaciones (así los tests siguen igual).
 export function rankingDelMes(
   jugadores: { id: string; nombre: string }[],
   partidosPorJugador: Map<string, PartidoDelJugador[]>,
   ahora = momentoActual(),
+  penalizacionDelMes: Map<string, number> = new Map(),
 ): FilaDelRanking[] {
   const mes = ahora.dia.slice(0, 7) // "YYYY-MM"
 
   const filas = jugadores.map((jugador) => {
     const partidos = partidosPorJugador.get(jugador.id) ?? []
     const delMes = partidos.filter((partido) => partido.dia.startsWith(mes))
+    const penalizacion = penalizacionDelMes.get(jugador.id) ?? 0
     return {
       id: jugador.id,
       nombre: jugador.nombre,
-      puntosDelMes: puntosDe(estadisticasDelJugador(delMes, ahora)),
+      puntosDelMes: Math.max(0, puntosDe(estadisticasDelJugador(delMes, ahora)) - penalizacion),
       puntosTotales: puntosDe(estadisticasDelJugador(partidos, ahora)),
     }
   })

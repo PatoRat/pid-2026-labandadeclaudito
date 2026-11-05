@@ -18,7 +18,8 @@ import { sePuedeDisputar } from '@/lib/disputas'
 import { formatPrecio } from '@/lib/labels'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { montoDelHistorial, type MontoDelHistorial } from '@/lib/historial'
-import { sePuedeCalificar, venceLaSena } from '@/lib/estado-reserva'
+import { estadoDeReserva, sePuedeCalificar, venceLaSena } from '@/lib/estado-reserva'
+import { EtiquetarAmigos } from '@/components/etiquetar-amigos'
 import { calcularPagina } from '@/lib/paginacion'
 import { diaEnPalabras } from '@/lib/fechas'
 import { diaDeReserva, momentoActual, refundsDeposit, turnoYaPaso } from '@/lib/time'
@@ -76,6 +77,8 @@ async function getReservas(
       disputa: true,
       // Solo la mía: en un partido con sumados, cada uno califica aparte
       calificaciones: { where: { jugadorId } },
+      // Para mostrar y editar a quién etiquetó en una reserva finalizada
+      etiquetas: { include: { jugador: { select: { nombre: true, imagenUrl: true } } } },
     },
     orderBy: [{ fecha: orden }, { horaInicio: orden }],
     skip,
@@ -315,6 +318,18 @@ function FilaReserva({
   // La consulta trae solo la del jugador logueado: hay una o ninguna
   const miCalificacion = reserva.calificaciones[0]
 
+  // Etiquetar amigos: solo el que reservó, en una reserva que ya se jugó. No
+  // aparece en canceladas (conDisputa marca la vista historial) ni para el que
+  // se sumó al partido de otro.
+  const visible = estadoDeReserva(turno, ahora)
+  const puedeEtiquetar =
+    conDisputa && !esParticipante && (visible === 'FINALIZADA' || visible === 'ASISTIO')
+  const etiquetados = reserva.etiquetas.map((etiqueta) => ({
+    id: etiqueta.jugadorId,
+    nombre: etiqueta.jugador.nombre,
+    imagenUrl: etiqueta.jugador.imagenUrl,
+  }))
+
   return (
     <TableRow>
       <TableCell className="px-3 pl-4">
@@ -326,6 +341,9 @@ function FilaReserva({
           deporte={reserva.cancha.deporte}
           complejo={reserva.cancha.complejo.nombre}
         />
+        {puedeEtiquetar && (
+          <EtiquetarAmigos bookingId={reserva.id} etiquetadosIniciales={etiquetados} />
+        )}
       </TableCell>
       <TableCell className="px-3">
         <BookingStatusBadge

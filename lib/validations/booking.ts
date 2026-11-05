@@ -25,3 +25,9 @@ export const editPlayersSchema = z.object({
 export const joinBookingSchema = z.object({
   jugadores: z.number().int().min(1),
 })
+
+// Etiquetar a un amigo en una reserva finalizada: solo su id (el id del que
+// etiqueta sale de la sesión, nunca del body).
+export const tagPlayerSchema = z.object({
+  jugadorId: z.string().min(1),
+})

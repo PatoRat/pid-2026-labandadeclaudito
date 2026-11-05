@@ -50,6 +50,8 @@ export default async function AdminHomePage() {
     cuentasSuspendidas,
     complejosPorAprobar,
     complejoMasViejo,
+    ticketsPorResolver,
+    ticketMasViejo,
   ] = await Promise.all([
     db.disputa.count({ where: { estado: 'ABIERTA' } }),
     db.disputa.findFirst({
@@ -78,6 +80,13 @@ export default async function AdminHomePage() {
       where: complejoPorAprobar(),
       orderBy: { createdAt: 'asc' },
       select: { createdAt: true },
+    }),
+    // Tickets que el jugador ya respondió y esperan la decisión del admin
+    db.ticket.count({ where: { estado: 'PENDIENTE', respondidoEn: { not: null } } }),
+    db.ticket.findFirst({
+      where: { estado: 'PENDIENTE', respondidoEn: { not: null } },
+      orderBy: { respondidoEn: 'asc' },
+      select: { respondidoEn: true },
     }),
   ])
 
@@ -131,7 +140,7 @@ export default async function AdminHomePage() {
     },
   ]
 
-  const pendientes = disputasAbiertas + complejosPorAprobar
+  const pendientes = disputasAbiertas + complejosPorAprobar + ticketsPorResolver
   let bajada = 'Está todo al día: no hay nada esperando tu decisión.'
   if (pendientes === 1) {
     bajada = 'Hay 1 inconveniente esperando tu decisión.'
@@ -149,6 +158,12 @@ export default async function AdminHomePage() {
   if (complejoMasViejo !== null) {
     const diaDelComplejo = momentoActual(complejoMasViejo.createdAt).dia
     antiguedadDelComplejo = haceCuanto(diaDelComplejo, hoy)
+  }
+
+  let antiguedadDelTicket = ''
+  if (ticketMasViejo?.respondidoEn != null) {
+    const diaDelTicket = momentoActual(ticketMasViejo.respondidoEn).dia
+    antiguedadDelTicket = haceCuanto(diaDelTicket, hoy)
   }
 
   // Cada fila lleva al listado que la detalla
@@ -196,6 +211,8 @@ export default async function AdminHomePage() {
         antiguedadDeLaDisputa={antiguedadDeLaDisputa}
         complejosPorAprobar={complejosPorAprobar}
         antiguedadDelComplejo={antiguedadDelComplejo}
+        ticketsPorResolver={ticketsPorResolver}
+        antiguedadDelTicket={antiguedadDelTicket}
       />
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

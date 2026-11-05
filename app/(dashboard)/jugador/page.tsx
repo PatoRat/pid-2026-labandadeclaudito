@@ -9,8 +9,8 @@ import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
-import { puntosDeLosPartidos } from '@/lib/gamificacion'
-import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
+import { penalizacionDe } from '@/lib/tickets'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -20,6 +20,7 @@ import { FilaDeTurno } from '@/components/fila-de-turno'
 import { ProximoTurnoDestacado } from '@/components/proximo-turno-destacado'
 import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
 import { TarjetaNivel } from '@/components/tarjeta-nivel'
+import { TicketPendiente } from '@/components/ticket-pendiente'
 
 export default async function JugadorHomePage() {
   const session = await auth()
@@ -37,7 +38,8 @@ export default async function JugadorHomePage() {
     totalComplejos,
     reservasDelSabado,
     partidosAbiertosTodos,
-    misPartidos,
+    puntosPorJugador,
+    ticketsPendientes,
   ] = await Promise.all([
     db.reserva.findMany({
       where: {
@@ -69,10 +71,16 @@ export default async function JugadorHomePage() {
       },
     }),
     getPartidosAbiertos(session.user.id),
-    getPartidosDeJugadores([session.user.id]),
+    puntosDeJugadores([session.user.id]),
+    // Tickets de penalización que el jugador todavía tiene que responder o
+    // apelar. Los resueltos salen del inicio (quedan en el historial del admin).
+    db.ticket.findMany({
+      where: { jugadorId: session.user.id, estado: 'PENDIENTE' },
+      orderBy: { createdAt: 'desc' },
+    }),
   ])
 
-  const puntos = puntosDeLosPartidos(misPartidos.get(session.user.id) ?? [])
+  const puntos = puntosPorJugador.get(session.user.id) ?? 0
 
   // En el feed se muestran los primeros; el resto se ve en Buscar canchas
   const partidosAbiertos = partidosAbiertosTodos.slice(0, 4)
@@ -117,6 +125,23 @@ export default async function JugadorHomePage() {
           Buscar canchas
         </Button>
       </div>
+
+      {ticketsPendientes.length > 0 && (
+        <div className="mb-7 space-y-4">
+          {ticketsPendientes.map((ticket) => (
+            <TicketPendiente
+              key={ticket.id}
+              ticketId={ticket.id}
+              motivo={ticket.motivo}
+              reservasInvalidas={ticket.reservasInvalidas}
+              penalizacion={penalizacionDe(ticket)}
+              puntosAnteriores={ticket.puntosAnteriores}
+              venceEn={ticket.venceEn.toISOString()}
+              yaRespondio={ticket.respondidoEn !== null}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* min-w-0: sin esto, en celular la columna se ensancha hasta el texto

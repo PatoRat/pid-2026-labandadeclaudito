@@ -60,6 +60,12 @@ enum TipoEvidencia {
   VIDEO
 }
 
+enum EstadoTicket {
+  PENDIENTE
+  ANULADO // evidencia validada: no penaliza
+  CONFIRMADO // evidencia rechazada: penaliza
+}
+
 model Usuario {
   id           String   @id @default(cuid())
   nombre       String
@@ -73,42 +79,45 @@ model Usuario {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  complejos         Complejo[]             @relation("DuenioComplejos")
-  reservas          Reserva[]              @relation("JugadorReservas")
-  participaciones   ParticipanteReserva[]  @relation("ParticipacionesDelJugador")
-  disputas          Disputa[]              @relation("DisputasDelJugador")
-  disputasResueltas Disputa[]              @relation("DisputasResueltas")
-  calificaciones    Calificacion[]         @relation("CalificacionesDelJugador")
+  complejos         Complejo[]            @relation("DuenioComplejos")
+  reservas          Reserva[]             @relation("JugadorReservas")
+  participaciones   ParticipanteReserva[] @relation("ParticipacionesDelJugador")
+  disputas          Disputa[]             @relation("DisputasDelJugador")
+  disputasResueltas Disputa[]             @relation("DisputasResueltas")
+  calificaciones    Calificacion[]        @relation("CalificacionesDelJugador")
+  etiquetas         EtiquetaReserva[]     @relation("EtiquetasDelJugador")
+  ticketsRecibidos  Ticket[]              @relation("TicketsDelJugador")
+  ticketsResueltos  Ticket[]              @relation("TicketsResueltos")
 }
 
 model Complejo {
-  id                       String   @id @default(cuid())
+  id                       String           @id @default(cuid())
   nombre                   String
   direccion                String
   zona                     String
   contacto                 String
   duenioId                 String
   // Baja lógica: al dar de baja no se borra, para conservar el historial de reservas
-  activo                   Boolean  @default(true)
+  activo                   Boolean          @default(true)
   // % de seña por defecto de sus canchas; cada Cancha puede pisarlo con el propio
-  porcentajeSenaDefault    Int      @default(30)
+  porcentajeSenaDefault    Int              @default(30)
   // Minutos de anticipación mínima para reservar, por defecto de sus canchas;
   // cada Cancha puede pisarlo con el propio. 0 = hasta que empieza el turno.
   // Default 180 = 3 horas (mismo valor que arranca el form de alta)
-  minAdvanceMinutesDefault Int      @default(180)
+  minAdvanceMinutesDefault Int              @default(180)
   // Horas antes del turno hasta las que se puede cancelar con devolución de
   // la seña. Aplica a todas sus canchas (no hay override por cancha).
-  cancellationHours        Int      @default(24)
+  cancellationHours        Int              @default(24)
   // Un complejo nuevo no lo ven los jugadores hasta que un admin lo aprueba
   estadoAprobacion         EstadoAprobacion @default(PENDIENTE)
   // Lo escribe el admin al rechazar; se borra cuando el dueño lo corrige
   motivoRechazo            String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
 
-  duenio   Usuario          @relation("DuenioComplejos", fields: [duenioId], references: [id])
-  canchas  Cancha[]
-  imagenes ImagenComplejo[]
+  duenio         Usuario          @relation("DuenioComplejos", fields: [duenioId], references: [id])
+  canchas        Cancha[]
+  imagenes       ImagenComplejo[]
   calificaciones Calificacion[]
 
   @@index([zona])
@@ -218,12 +227,13 @@ model Reserva {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  cancha       Cancha                @relation(fields: [canchaId], references: [id])
-  jugador      Usuario               @relation("JugadorReservas", fields: [jugadorId], references: [id])
-  participantes ParticipanteReserva[]
-  pago         Pago?
-  disputa      Disputa?
+  cancha         Cancha                @relation(fields: [canchaId], references: [id])
+  jugador        Usuario               @relation("JugadorReservas", fields: [jugadorId], references: [id])
+  participantes  ParticipanteReserva[]
+  pago           Pago?
+  disputa        Disputa?
   calificaciones Calificacion[]
+  etiquetas      EtiquetaReserva[]
 
   // Última defensa contra doble reserva: no puede haber dos reservas activas
   // en la misma cancha, fecha y hora de inicio. Las canceladas no cuentan:
@@ -306,6 +316,71 @@ model Disputa {
 
   // Para el listado del admin, que filtra abiertas o resueltas
   @@index([estado])
+}
+
+// Amigos etiquetados en una reserva ya finalizada. No aportan cupo (eso es
+// ParticipanteReserva); solo registran que ese jugador también jugó, para que
+// sume puntos. El que etiqueta es el que hizo la reserva (etiquetadoPor).
+model EtiquetaReserva {
+  id            String   @id @default(cuid())
+  reservaId     String
+  jugadorId     String // el etiquetado
+  etiquetadoPor String // quién etiquetó (= Reserva.jugadorId)
+  createdAt     DateTime @default(now())
+
+  reserva Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  jugador Usuario @relation("EtiquetasDelJugador", fields: [jugadorId], references: [id])
+
+  // Un jugador no se etiqueta dos veces en la misma reserva
+  @@unique([reservaId, jugadorId])
+  @@index([reservaId])
+  @@index([jugadorId])
+}
+
+// El admin penaliza a un jugador para frenar fraude de asistencias. En vez de
+// fijar puntos a mano, indica cuántas reservas invalida (reservasInvalidas): la
+// penalización es reservasInvalidas * PUNTOS.jugado y se resta del total que se
+// deriva de las reservas (ver lib/tickets.ts). El jugador tiene 5 días para
+// responder con evidencia; el admin la valida (ANULADO) o la rechaza
+// (CONFIRMADO). Pasados los 5 días sin resolver, la penalización se aplica igual
+// pero el ticket sigue vivo para que el jugador pueda apelar.
+model Ticket {
+  id                String       @id @default(cuid())
+  jugadorId         String // el penalizado
+  adminId           String // quién lo creó
+  reservasInvalidas Int
+  // Snapshot del total del jugador al crear el ticket, solo para mostrar
+  puntosAnteriores  Int
+  motivo            String
+  estado            EstadoTicket @default(PENDIENTE)
+  // createdAt + 5 días: pasado este momento la penalización se aplica sola
+  venceEn           DateTime
+  comentarioJugador String? // lo que escribió al responder o apelar
+  respondidoEn      DateTime?
+  comentarioAdmin   String?
+  resueltoEn        DateTime?
+  createdAt         DateTime     @default(now())
+
+  jugador    Usuario           @relation("TicketsDelJugador", fields: [jugadorId], references: [id])
+  admin      Usuario           @relation("TicketsResueltos", fields: [adminId], references: [id])
+  evidencias EvidenciaTicket[]
+
+  @@index([jugadorId])
+  @@index([estado])
+}
+
+// La evidencia que sube el jugador para responder un ticket. Mismo patrón que
+// EvidenciaDisputa: imágenes a Vercel Blob.
+model EvidenciaTicket {
+  id       String        @id @default(cuid())
+  ticketId String
+  url      String
+  tipo     TipoEvidencia @default(IMAGEN)
+  orden    Int           @default(0)
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
 }
 
 // Una prueba que subió el jugador (a Vercel Blob, como las fotos de complejo).

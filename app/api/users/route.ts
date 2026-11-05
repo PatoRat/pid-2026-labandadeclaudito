@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@/lib/generated/prisma/client'
+import { auth } from '@/auth'
 import { registerSchema } from '@/lib/validations/user'
 import { hashPassword } from '@/lib/passwords'
 import { db } from '@/lib/db'
@@ -9,6 +10,37 @@ import {
   REGISTRO_POR_IP,
   superoElLimite,
 } from '@/lib/limite-intentos'
+
+// Mínimo de caracteres antes de empezar a sugerir: con menos la búsqueda
+// devolvería medio padrón y no sirve para autocompletar.
+const MIN_CARACTERES_BUSQUEDA = 3
+
+// Busca jugadores por nombre de display (no por email) para el autocompletado
+// del etiquetado de amigos. Requiere sesión y nunca devuelve el email ni datos
+// sensibles: solo lo que se muestra en la sugerencia.
+export async function GET(request: Request) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
+  const q = new URL(request.url).searchParams.get('q')?.trim() ?? ''
+  if (q.length < MIN_CARACTERES_BUSQUEDA) {
+    return NextResponse.json({ usuarios: [] }, { status: 200 })
+  }
+
+  const usuarios = await db.usuario.findMany({
+    where: {
+      rol: 'JUGADOR',
+      activo: true,
+      nombre: { contains: q, mode: 'insensitive' },
+      id: { not: session.user.id },
+    },
+    select: { id: true, nombre: true, imagenUrl: true },
+    orderBy: { nombre: 'asc' },
+    take: 8,
+  })
+
+  return NextResponse.json({ usuarios }, { status: 200 })
+}
 
 export async function POST(request: Request) {
   // Se cuenta cada intento de registro, salga bien o no: frena la creación

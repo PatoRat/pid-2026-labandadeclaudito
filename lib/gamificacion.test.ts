@@ -23,6 +23,7 @@ function partido(cambios: Partial<PartidoDelJugador> = {}): PartidoDelJugador {
     jugadores: null,
     complejoId: 'complejo-1',
     calificado: false,
+    etiquetado: false,
     ...cambios,
   }
 }
@@ -46,6 +47,15 @@ describe('puntosDe', () => {
 
   test('publicar un partido abierto que se jugó suma 5 más', () => {
     expect(puntos([partido({ jugadores: 6 })])).toBe(15)
+  })
+
+  test('que un amigo te etiquete en un partido jugado suma 10', () => {
+    expect(puntos([partido({ propio: false, etiquetado: true })])).toBe(10)
+  })
+
+  test('una etiqueta en un turno que no se jugó no suma', () => {
+    expect(puntos([partido({ etiquetado: true, estado: 'CANCELADA' })])).toBe(0)
+    expect(puntos([partido({ etiquetado: true, dia: '2026-11-10' })])).toBe(0)
   })
 
   test('no presentarse resta 20', () => {

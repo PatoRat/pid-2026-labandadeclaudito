@@ -17,8 +17,8 @@ import {
   type BloqueoDelDia,
 } from '@/lib/blocks'
 import { diaEnPalabras } from '@/lib/fechas'
-import { nivelDe, puntosDeLosPartidos } from '@/lib/gamificacion'
-import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { nivelDe } from '@/lib/gamificacion'
+import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
 import { CourtCard } from '@/components/court-card'
 import { ComplexGallery } from '@/components/complex-gallery'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
@@ -33,9 +33,9 @@ export default async function ComplejoDetallePage({
   const { id } = await params
   const filtros = searchCourtsSchema.parse(await searchParams)
 
-  const [complejo, misPartidos, resumenCalificaciones, opiniones] = await Promise.all([
+  const [complejo, puntosPorJugador, resumenCalificaciones, opiniones] = await Promise.all([
     getComplexDetail(id, filtros, session.user.id),
-    getPartidosDeJugadores([session.user.id]),
+    puntosDeJugadores([session.user.id]),
     db.calificacion.aggregate({
       where: { complejoId: id },
       _avg: { puntaje: true },
@@ -59,7 +59,7 @@ export default async function ComplejoDetallePage({
 
   // El nivel define el descuento que se muestra al reservar (el server lo
   // vuelve a calcular al crear la reserva: no se confía en este)
-  const { actual: nivel } = nivelDe(puntosDeLosPartidos(misPartidos.get(session.user.id) ?? []))
+  const { actual: nivel } = nivelDe(puntosPorJugador.get(session.user.id) ?? 0)
 
   // Una cancha puede tener su propio porcentaje de seña: el número se muestra
   // solo si es el mismo en todas.

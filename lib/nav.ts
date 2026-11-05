@@ -5,6 +5,7 @@ import {
   Home,
   Scale,
   Search,
+  Ticket,
   Trophy,
   Users,
 } from 'lucide-react'
@@ -39,6 +40,7 @@ export const navPorRol: Record<'JUGADOR' | 'DUENIO' | 'ADMIN', ItemNav[]> = {
     { href: '/admin/complejos', label: 'Complejos', icon: Building2 },
     { href: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
     { href: '/admin/disputas', label: 'Disputas', icon: Scale },
+    { href: '/admin/tickets', label: 'Tickets', icon: Ticket },
   ],
 }
 

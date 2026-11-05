@@ -2,8 +2,8 @@ import { db } from '@/lib/db'
 import { complejoVisible } from '@/lib/complejos'
 import { pendientesVencidas } from '@/lib/bookings'
 import { esIncompleta } from '@/lib/jugadores'
-import { nivelDe, puntosDeLosPartidos } from '@/lib/gamificacion'
-import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { nivelDe } from '@/lib/gamificacion'
+import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
 import { diaDeHoy, diaDeReserva, turnoYaPaso } from '@/lib/time'
 import type { Prisma } from '@/lib/generated/prisma/client'
 import type { SearchCourtsFilters } from '@/lib/validations/court-search'
@@ -62,14 +62,11 @@ export async function getPartidosAbiertos(jugadorId: string, filtros?: SearchCou
   )
 
   // El nivel de cada organizador, para mostrarlo en la tarjeta. Una sola
-  // consulta para todos (no una por partido).
-  const partidosPorOrganizador = await getPartidosDeJugadores([
-    ...new Set(abiertos.map((reserva) => reserva.jugadorId)),
-  ])
+  // consulta para todos (no una por partido), con la penalización de tickets.
+  const idsDeOrganizadores = [...new Set(abiertos.map((reserva) => reserva.jugadorId))]
+  const puntosPorOrganizador = await puntosDeJugadores(idsDeOrganizadores)
   return abiertos.map((reserva) => ({
     ...reserva,
-    nivelDelOrganizador: nivelDe(
-      puntosDeLosPartidos(partidosPorOrganizador.get(reserva.jugadorId) ?? []),
-    ).actual.nombre,
+    nivelDelOrganizador: nivelDe(puntosPorOrganizador.get(reserva.jugadorId) ?? 0).actual.nombre,
   }))
 }

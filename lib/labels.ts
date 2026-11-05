@@ -3,6 +3,7 @@ import type {
   Deporte,
   EstadoAprobacion,
   EstadoDisputa,
+  EstadoTicket,
   Rol,
   TipoSuperficie,
 } from '@/lib/generated/prisma/client'
@@ -75,6 +76,13 @@ export const estadoAprobacionLabels: Record<EstadoAprobacion, string> = {
 export const decisionDisputaLabels: Record<DecisionDisputa, string> = {
   A_FAVOR_JUGADOR: 'A favor del jugador',
   A_FAVOR_DUENIO: 'A favor del complejo',
+}
+
+// Cómo quedó un ticket de penalización ya resuelto (o pendiente)
+export const estadoTicketLabels: Record<EstadoTicket, string> = {
+  PENDIENTE: 'Pendiente',
+  ANULADO: 'Anulado',
+  CONFIRMADO: 'Confirmado',
 }
 
 // El índice es el día de la semana de Date.getUTCDay(): 0 = domingo

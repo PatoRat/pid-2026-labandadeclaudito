@@ -7,8 +7,8 @@ import { getBlocksOfDay, isSlotBlocked } from '@/lib/blocks'
 import { pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
 import { normalizarJugadores } from '@/lib/jugadores'
-import { montoDelDescuento, nivelDe, puntosDeLosPartidos } from '@/lib/gamificacion'
-import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { montoDelDescuento, nivelDe } from '@/lib/gamificacion'
+import { puntosDeUnJugador } from '@/lib/puntos-del-jugador'
 import {
   DIAS_MAXIMOS_DE_ANTICIPACION,
   diaSemanaDeReserva,
@@ -159,8 +159,7 @@ export async function POST(request: Request) {
   // Descuento por el nivel que tiene el jugador hoy: queda congelado en la
   // reserva aunque después suba o baje de nivel. Mismo % de seña que usa
   // /deposit, para que el descuento nunca pase lo que se paga en la cancha.
-  const misPartidos = await getPartidosDeJugadores([session.user.id])
-  const { actual: nivel } = nivelDe(puntosDeLosPartidos(misPartidos.get(session.user.id) ?? []))
+  const { actual: nivel } = nivelDe(await puntosDeUnJugador(session.user.id))
   const descuento = montoDelDescuento(
     Number(precioTurno),
     nivel.descuento,

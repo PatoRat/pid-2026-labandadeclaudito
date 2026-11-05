@@ -7,6 +7,7 @@ import { InsigniasDelJugador } from '@/components/insignias-del-jugador'
 import { homePorRol } from '@/lib/home-por-rol'
 import { estadisticasDelJugador, insigniasGanadas, puntosDe } from '@/lib/gamificacion'
 import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { getPenalizacionDeJugadores } from '@/lib/tickets'
 
 // Única pantalla de perfil para jugador y dueño (el proxy deja pasar /perfil
 // para cualquier rol). El admin es una cuenta de la app: no tiene perfil.
@@ -16,17 +17,22 @@ export default async function PerfilPage() {
   if (session.user.rol === 'ADMIN') redirect('/admin')
 
   const esJugador = session.user.rol === 'JUGADOR'
-  const [usuario, partidos] = await Promise.all([
+  const [usuario, partidos, penalizacionPorJugador] = await Promise.all([
     db.usuario.findUnique({
       where: { id: session.user.id },
       select: { nombre: true, email: true, telefono: true, dni: true, imagenUrl: true },
     }),
     // El dueño no juega: no tiene nivel ni insignias
     esJugador ? getPartidosDeJugadores([session.user.id]) : null,
+    esJugador ? getPenalizacionDeJugadores([session.user.id]) : null,
   ])
   if (!usuario) redirect('/login')
 
   const estadisticas = partidos ? estadisticasDelJugador(partidos.get(session.user.id) ?? []) : null
+  // El nivel resta la penalización de los tickets del admin; las insignias no
+  // (se ganan por lo que el jugador hizo, no se sacan).
+  const penalizacion = penalizacionPorJugador?.get(session.user.id) ?? 0
+  const puntosDelNivel = estadisticas ? Math.max(0, puntosDe(estadisticas) - penalizacion) : 0
 
   return (
     <main>
@@ -46,7 +52,7 @@ export default async function PerfilPage() {
             libres. Faltar a un turno resta.
           </p>
           <div className="mt-5 space-y-5">
-            <TarjetaNivel puntos={puntosDe(estadisticas)} />
+            <TarjetaNivel puntos={puntosDelNivel} />
             <InsigniasDelJugador ganadas={insigniasGanadas(estadisticas).map((i) => i.id)} />
           </div>
         </section>

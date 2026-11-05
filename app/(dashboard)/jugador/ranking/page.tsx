@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { PUNTOS, nivelDe, rankingDelMes } from '@/lib/gamificacion'
 import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
+import { getPenalizacionDeJugadores } from '@/lib/tickets'
 import { iniciales } from '@/lib/iniciales'
 import { nombresDeMeses } from '@/lib/labels'
 import { momentoActual } from '@/lib/time'
@@ -35,8 +36,22 @@ export default async function RankingPage() {
     where: { rol: 'JUGADOR', activo: true },
     select: { id: true, nombre: true, imagenUrl: true },
   })
-  const partidos = await getPartidosDeJugadores(jugadores.map((jugador) => jugador.id))
-  const ranking = rankingDelMes(jugadores, partidos, ahora)
+  const jugadorIds = jugadores.map((jugador) => jugador.id)
+  // Medianoche del 1° del mes en Argentina (UTC-3): desde ahí cuentan los
+  // tickets que pesan sobre el ranking de este mes.
+  const inicioDelMes = new Date(`${ahora.dia.slice(0, 7)}-01T00:00:00-03:00`)
+  const [partidos, penalizacionPorJugador, penalizacionDelMesPorJugador] = await Promise.all([
+    getPartidosDeJugadores(jugadorIds),
+    getPenalizacionDeJugadores(jugadorIds),
+    getPenalizacionDeJugadores(jugadorIds, { creadosDesde: inicioDelMes }),
+  ])
+  const ranking = rankingDelMes(jugadores, partidos, ahora, penalizacionDelMesPorJugador)
+
+  // El nivel que se muestra resta la penalización de los tickets del admin; el
+  // orden del mes (puntosDelMes) es solo actividad y no se penaliza.
+  function nivelConPenalizacion(id: string, puntosTotales: number) {
+    return nivelDe(Math.max(0, puntosTotales - (penalizacionPorJugador.get(id) ?? 0))).actual.nombre
+  }
 
   const fotos = new Map(jugadores.map((jugador) => [jugador.id, jugador.imagenUrl]))
   const miPosicion = ranking.findIndex((fila) => fila.id === session.user.id)
@@ -95,7 +110,7 @@ export default async function RankingPage() {
                         {soyYo && <span className="text-muted-foreground font-normal"> (vos)</span>}
                       </p>
                       <p className="text-muted-foreground text-sm">
-                        {nivelDe(fila.puntosTotales).actual.nombre}
+                        {nivelConPenalizacion(fila.id, fila.puntosTotales)}
                       </p>
                     </div>
                     <p className="font-heading text-primary shrink-0 text-lg font-bold">
