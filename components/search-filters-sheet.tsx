@@ -20,9 +20,11 @@ import type { SearchCourtsFilters } from '@/lib/validations/court-search'
 export function SearchFiltersSheet({
   filtros,
   cantidadDeFiltros,
+  incompletas = false,
 }: {
   filtros: SearchCourtsFilters
   cantidadDeFiltros: number
+  incompletas?: boolean
 }) {
   return (
     <Sheet>
@@ -38,7 +40,7 @@ export function SearchFiltersSheet({
           <SheetDescription>Combiná los que quieras para encontrar tu cancha.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-4">
-          <FiltrosDeBusqueda filtros={filtros} idPrefijo="sheet-" />
+          <FiltrosDeBusqueda filtros={filtros} idPrefijo="sheet-" incompletas={incompletas} />
         </div>
       </SheetContent>
     </Sheet>

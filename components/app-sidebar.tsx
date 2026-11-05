@@ -2,17 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  Building2,
-  CalendarDays,
-  ChartColumn,
-  Equal,
-  Home,
-  Scale,
-  Search,
-  Users,
-  X,
-} from 'lucide-react'
+import { Equal, X } from 'lucide-react'
+import { navPorRol, esElItemActivo } from '@/lib/nav'
+import { useIsPortrait } from '@/hooks/use-portrait'
 import { homePorRol } from '@/lib/home-por-rol'
 import { rolLabels } from '@/lib/labels'
 import { Button } from '@/components/ui/button'
@@ -35,41 +27,6 @@ import { iniciales } from '@/lib/iniciales'
 import { SignOutButton } from '@/components/sign-out-button'
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
-
-type ItemNav = {
-  href: string
-  label: string
-  icon: typeof Home
-}
-
-const navPorRol: Record<'JUGADOR' | 'DUENIO' | 'ADMIN', ItemNav[]> = {
-  JUGADOR: [
-    { href: '/jugador', label: 'Inicio', icon: Home },
-    { href: '/jugador/canchas', label: 'Buscar canchas', icon: Search },
-    { href: '/jugador/reservas', label: 'Mis reservas', icon: CalendarDays },
-  ],
-  DUENIO: [
-    { href: '/dueno', label: 'Inicio', icon: Home },
-    { href: '/dueno/complejos', label: 'Mis complejos', icon: Building2 },
-    { href: '/dueno/reservas', label: 'Reservas', icon: CalendarDays },
-    { href: '/dueno/dashboard', label: 'Estadísticas', icon: ChartColumn },
-  ],
-  ADMIN: [
-    { href: '/admin', label: 'Inicio', icon: Home },
-    { href: '/admin/usuarios', label: 'Usuarios', icon: Users },
-    { href: '/admin/complejos', label: 'Complejos', icon: Building2 },
-    { href: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
-    { href: '/admin/disputas', label: 'Disputas', icon: Scale },
-  ],
-}
-
-// El Inicio de cada rol es prefijo de todas sus páginas (/admin lo es de
-// /admin/usuarios), así que ese se compara exacto; el resto se ilumina también
-// en sus subrutas (/admin/disputas/[id], /dueno/complejos/[id]/canchas).
-function esElItemActivo(href: string, pathname: string, home: string): boolean {
-  if (href === home) return pathname === href
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
 
 // Botón de la barra de arriba en mobile para abrir el sidebar (dos líneas)
 export function MobileMenuButton() {
@@ -101,8 +58,13 @@ export function AppSidebar({
   const pathname = usePathname()
   // En mobile el sidebar es un panel encima de la página: lo cerramos al navegar
   const { isMobile, setOpenMobile } = useSidebar()
+  const portrait = useIsPortrait()
   const items = navPorRol[rol]
   const home = homePorRol(rol)
+
+  // En formato vertical no hay sidebar: la navegación va en la barra inferior
+  // (components/bottom-nav.tsx). Lo desmontamos para que no reserve ancho.
+  if (portrait) return null
 
   return (
     <Sidebar collapsible="icon" className="group-data-[side=left]:border-r-0">

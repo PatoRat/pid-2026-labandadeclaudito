@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { estadoDeReserva, formatearTiempoRestante, senaVencida } from './estado-reserva'
+import {
+  estadoDeReserva,
+  formatearTiempoRestante,
+  sePuedeCalificar,
+  senaVencida,
+} from './estado-reserva'
 
 describe('senaVencida', () => {
   const creadaEn = new Date('2026-09-29T15:00:00Z')
@@ -129,5 +134,33 @@ describe('formatearTiempoRestante', () => {
   test('vencida: nunca muestra tiempo negativo', () => {
     expect(formatearTiempoRestante(0)).toBe('00:00')
     expect(formatearTiempoRestante(-5000)).toBe('00:00')
+  })
+})
+
+describe('sePuedeCalificar', () => {
+  const ahoraDespues = { dia: '2026-09-30', hora: '10:00' }
+
+  function reserva(estado: 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA', asistio: boolean | null) {
+    return { estado, asistio, dia, horaInicio: '20:00', horaFin: '21:00' }
+  }
+
+  test('una confirmada que ya terminó se puede calificar', () => {
+    expect(sePuedeCalificar(reserva('CONFIRMADA', null), ahoraDespues)).toBe(true)
+    expect(sePuedeCalificar(reserva('CONFIRMADA', true), ahoraDespues)).toBe(true)
+  })
+
+  test('no antes de que termine el turno', () => {
+    expect(sePuedeCalificar(reserva('CONFIRMADA', null), { dia, hora: '19:00' })).toBe(false)
+    expect(sePuedeCalificar(reserva('CONFIRMADA', null), { dia, hora: '20:30' })).toBe(false)
+    expect(sePuedeCalificar(reserva('CONFIRMADA', null), { dia, hora: '21:00' })).toBe(true)
+  })
+
+  test('un no-show no califica', () => {
+    expect(sePuedeCalificar(reserva('CONFIRMADA', false), ahoraDespues)).toBe(false)
+  })
+
+  test('ni una cancelada ni una que nunca pagó la seña', () => {
+    expect(sePuedeCalificar(reserva('CANCELADA', null), ahoraDespues)).toBe(false)
+    expect(sePuedeCalificar(reserva('PENDIENTE', null), ahoraDespues)).toBe(false)
   })
 })

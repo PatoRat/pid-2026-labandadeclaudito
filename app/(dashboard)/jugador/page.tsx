@@ -7,6 +7,10 @@ import { dondeProximas, pendientesVencidas } from '@/lib/bookings'
 import { complejoVisible } from '@/lib/complejos'
 import { venceLaSena } from '@/lib/estado-reserva'
 import { diaCercano, diaEnPalabras, proximoSabado, saludoSegunHora } from '@/lib/fechas'
+import { textoJugadoresFaltantes } from '@/lib/jugadores'
+import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
+import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
+import { penalizacionDe } from '@/lib/tickets'
 import { diaDeHoy, diaDeReserva, sumarDias } from '@/lib/time'
 import { Button } from '@/components/ui/button'
 import { EstadoVacio } from '@/components/estado-vacio'
@@ -14,6 +18,9 @@ import { CuentaRegresivaSena } from '@/components/cuenta-regresiva-sena'
 import { RefreshWhenDepositExpires } from '@/components/refresh-when-deposit-expires'
 import { FilaDeTurno } from '@/components/fila-de-turno'
 import { ProximoTurnoDestacado } from '@/components/proximo-turno-destacado'
+import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
+import { TarjetaNivel } from '@/components/tarjeta-nivel'
+import { TicketPendiente } from '@/components/ticket-pendiente'
 
 export default async function JugadorHomePage() {
   const session = await auth()
@@ -22,14 +29,17 @@ export default async function JugadorHomePage() {
   const hoy = diaDeHoy()
   const sabado = proximoSabado(hoy)
 
-  // Las cinco consultas no dependen entre sí: se hacen a la vez (una sola
-  // espera a la base en lugar de cinco seguidas).
+  // Las consultas no dependen entre sí: se hacen a la vez (una sola espera a
+  // la base en lugar de varias seguidas).
   const [
     proximasReservas,
     totalProximasReservas,
     totalReservas,
     totalComplejos,
     reservasDelSabado,
+    partidosAbiertosTodos,
+    puntosPorJugador,
+    ticketsPendientes,
   ] = await Promise.all([
     db.reserva.findMany({
       where: {
@@ -60,7 +70,20 @@ export default async function JugadorHomePage() {
         NOT: pendientesVencidas(),
       },
     }),
+    getPartidosAbiertos(session.user.id),
+    puntosDeJugadores([session.user.id]),
+    // Tickets de penalización que el jugador todavía tiene que responder o
+    // apelar. Los resueltos salen del inicio (quedan en el historial del admin).
+    db.ticket.findMany({
+      where: { jugadorId: session.user.id, estado: 'PENDIENTE' },
+      orderBy: { createdAt: 'desc' },
+    }),
   ])
+
+  const puntos = puntosPorJugador.get(session.user.id) ?? 0
+
+  // En el feed se muestran los primeros; el resto se ve en Buscar canchas
+  const partidosAbiertos = partidosAbiertosTodos.slice(0, 4)
 
   // El primero va destacado arriba; los otros dos, como tarjetas debajo.
   const [proximoTurno, ...otrosTurnos] = proximasReservas
@@ -103,6 +126,23 @@ export default async function JugadorHomePage() {
         </Button>
       </div>
 
+      {ticketsPendientes.length > 0 && (
+        <div className="mb-7 space-y-4">
+          {ticketsPendientes.map((ticket) => (
+            <TicketPendiente
+              key={ticket.id}
+              ticketId={ticket.id}
+              motivo={ticket.motivo}
+              reservasInvalidas={ticket.reservasInvalidas}
+              penalizacion={penalizacionDe(ticket)}
+              puntosAnteriores={ticket.puntosAnteriores}
+              venceEn={ticket.venceEn.toISOString()}
+              yaRespondio={ticket.respondidoEn !== null}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* min-w-0: sin esto, en celular la columna se ensancha hasta el texto
             más largo de las filas y la página se desborda de costado */}
@@ -127,6 +167,10 @@ export default async function JugadorHomePage() {
                 cancha={proximoTurno.cancha.nombre}
                 deporte={proximoTurno.cancha.deporte}
                 lugar={`${proximoTurno.cancha.complejo.nombre} · ${proximoTurno.cancha.complejo.zona}`}
+                nota={textoJugadoresFaltantes(
+                  proximoTurno.cancha.capacidad,
+                  proximoTurno.jugadores,
+                )}
               >
                 {/* Pendiente de seña: la cuenta regresiva va sobre fondo
                     claro, porque sus colores no se leen sobre el verde */}
@@ -178,6 +222,7 @@ export default async function JugadorHomePage() {
                         horaFin={reserva.horaFin}
                         deporte={reserva.cancha.deporte}
                         detalle={`${reserva.cancha.nombre} · ${reserva.cancha.complejo.nombre}, ${reserva.cancha.complejo.zona}`}
+                        nota={textoJugadoresFaltantes(reserva.cancha.capacidad, reserva.jugadores)}
                       >
                         <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
                           <ArrowRight className="size-4" />
@@ -189,9 +234,32 @@ export default async function JugadorHomePage() {
               )}
             </>
           )}
+
+          {partidosAbiertos.length > 0 && (
+            <>
+              <div className="mt-7 mb-3.5 flex items-baseline justify-between px-1">
+                <h2 className="font-heading text-xl font-bold">Partidos que buscan jugadores</h2>
+                <Link
+                  href="/jugador/canchas?incompletas=1"
+                  className="text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+                >
+                  Ver todos
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                {partidosAbiertos.map((reserva) => (
+                  <TarjetaPartidoAbierto key={reserva.id} reserva={reserva} />
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <TarjetaNivel puntos={puntos} conLink />
+
           {/* Un número protagonista y dos de apoyo, en vez de tres tarjetas iguales */}
           <div className="bg-card shadow-card rounded-3xl p-7">
             <p className="text-muted-foreground text-sm font-semibold">Desde que te sumaste</p>

@@ -153,6 +153,7 @@ describe('Baja lógica de una cancha (DELETE /api/courts/[id])', () => {
         horaApertura: '08:00',
         horaCierre: '12:00',
         duracionTurnoMin: 60,
+        capacidad: 10,
       }),
       conParams({ id: canchaId }),
     )

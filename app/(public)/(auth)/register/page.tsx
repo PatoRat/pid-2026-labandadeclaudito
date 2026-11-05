@@ -3,13 +3,16 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getSession, signIn } from 'next-auth/react'
 import { Mail, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InputContrasenia } from '@/components/input-contrasenia'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { LoginSuccess } from '@/components/login-success/login-success'
 import { registerSchema } from '@/lib/validations/user'
+import { homePorRol } from '@/lib/home-por-rol'
 
 // Cada opción de "Soy": la elegida va en el verde oscuro, como las pestañas
 const claseDeRol =
@@ -20,6 +23,10 @@ export default function RegistroPage() {
   const router = useRouter()
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [registroExitoso, setRegistroExitoso] = useState<{
+    nombre: string
+    destino: string
+  } | null>(null)
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -50,13 +57,40 @@ export default function RegistroPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(parsed.data),
     })
-    if (res.ok) {
+
+    if (!res.ok) {
+      const json = await res.json()
+      setError(json.error)
+      setCargando(false)
+      return
+    }
+
+    const resultado = await signIn('credentials', {
+      email: parsed.data.email,
+      password: parsed.data.password,
+      redirect: false,
+    })
+
+    // Si por algo no se pudo abrir la sesión, lo mandamos al login a mano.
+    if (resultado?.error) {
       router.push('/login?registrado=1')
       return
     }
-    const json = await res.json()
-    setError(json.error)
-    setCargando(false)
+
+    const session = await getSession()
+    if (!session) {
+      router.push('/login?registrado=1')
+      return
+    }
+
+    setRegistroExitoso({
+      nombre: session.user.name ?? '',
+      destino: homePorRol(session.user.rol),
+    })
+  }
+
+  if (registroExitoso) {
+    return <LoginSuccess nombre={registroExitoso.nombre} destino={registroExitoso.destino} />
   }
 
   return (

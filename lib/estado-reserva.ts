@@ -36,6 +36,18 @@ export function estadoDeReserva(
   return estadoDeUnTurnoTerminado(asistio)
 }
 
+// Se califica un turno que ya se jugó: confirmado, terminado y sin no-show.
+// Si el dueño todavía no marcó la asistencia (FINALIZADA) también vale: no
+// marcar no puede dejar al jugador sin opinar. La usan el endpoint y el
+// historial (para mostrar o no el botón "Calificar").
+export function sePuedeCalificar(
+  reserva: ReservaParaEstado,
+  ahora: { dia: string; hora: string },
+): boolean {
+  const estado = estadoDeReserva(reserva, ahora)
+  return estado === 'FINALIZADA' || estado === 'ASISTIO'
+}
+
 export const MINUTOS_PARA_PAGAR_SENA = 15
 
 // Armado con la constante: si cambia el plazo, el mensaje lo acompaña

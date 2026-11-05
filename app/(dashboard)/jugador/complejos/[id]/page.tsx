@@ -1,7 +1,12 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { ArrowLeft, BadgeCheck, MapPin, Phone } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, MapPin, Phone, Star } from 'lucide-react'
+import { db } from '@/lib/db'
+import { iniciales } from '@/lib/iniciales'
+import { haceCuanto } from '@/lib/fechas'
+import { momentoActual } from '@/lib/time'
+import { PuntajeEnEstrellas } from '@/components/puntaje-en-estrellas'
 import { getComplexDetail, filtersToQueryString } from '@/lib/court-search'
 import { searchCourtsSchema } from '@/lib/validations/court-search'
 import { deportesDistintos } from '@/lib/resumen-complejo'
@@ -12,6 +17,8 @@ import {
   type BloqueoDelDia,
 } from '@/lib/blocks'
 import { diaEnPalabras } from '@/lib/fechas'
+import { nivelDe } from '@/lib/gamificacion'
+import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
 import { CourtCard } from '@/components/court-card'
 import { ComplexGallery } from '@/components/complex-gallery'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
@@ -26,8 +33,33 @@ export default async function ComplejoDetallePage({
   const { id } = await params
   const filtros = searchCourtsSchema.parse(await searchParams)
 
-  const complejo = await getComplexDetail(id, filtros, session.user.id)
+  const [complejo, puntosPorJugador, resumenCalificaciones, opiniones] = await Promise.all([
+    getComplexDetail(id, filtros, session.user.id),
+    puntosDeJugadores([session.user.id]),
+    db.calificacion.aggregate({
+      where: { complejoId: id },
+      _avg: { puntaje: true },
+      _count: { _all: true },
+    }),
+    // Las últimas que dejaron un comentario: las que sin comentario no tienen
+    // nada para leer
+    db.calificacion.findMany({
+      where: { complejoId: id, comentario: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      include: { jugador: { select: { nombre: true } } },
+    }),
+  ])
   if (!complejo) notFound()
+
+  const cantidadCalificaciones = resumenCalificaciones._count._all
+  const promedio = resumenCalificaciones._avg.puntaje ?? 0
+  // Con coma decimal, como se escribe acá: 4,3
+  const promedioEnTexto = promedio.toFixed(1).replace('.', ',')
+
+  // El nivel define el descuento que se muestra al reservar (el server lo
+  // vuelve a calcular al crear la reserva: no se confía en este)
+  const { actual: nivel } = nivelDe(puntosPorJugador.get(session.user.id) ?? 0)
 
   // Una cancha puede tener su propio porcentaje de seña: el número se muestra
   // solo si es el mismo en todas.
@@ -47,6 +79,26 @@ export default async function ComplejoDetallePage({
       Verificado
     </span>
   )
+
+  // Va abajo del nombre, sobre la foto o sobre el fondo: hereda el color de texto
+  const calificacion =
+    cantidadCalificaciones === 0 ? (
+      <p className="mt-1.5 flex items-center gap-1.5 text-sm opacity-80">
+        <Star className="size-4" />
+        Todavía sin calificaciones
+      </p>
+    ) : (
+      <p className="mt-1.5 flex items-center gap-1.5">
+        <Star className="fill-highlight text-highlight size-4.5" />
+        <span className="font-heading text-lg font-bold">{promedioEnTexto}</span>
+        <span className="text-sm opacity-80">
+          ·{' '}
+          {cantidadCalificaciones === 1
+            ? '1 calificación'
+            : `${cantidadCalificaciones} calificaciones`}
+        </span>
+      </p>
+    )
 
   // Igual que en la búsqueda: los bloqueos se avisan solo si el jugador eligió
   // un día (y, si eligió horario, los de ese horario), nombrando el día.
@@ -81,6 +133,7 @@ export default async function ComplejoDetallePage({
             <MapPin className="size-4 shrink-0" />
             {complejo.direccion} · {complejo.zona}
           </p>
+          {calificacion}
         </ComplexGallery>
       ) : (
         <div className="mb-7">
@@ -88,6 +141,7 @@ export default async function ComplejoDetallePage({
           <h1 className="font-heading mt-2.5 text-4xl font-bold tracking-tight">
             {complejo.nombre}
           </h1>
+          {calificacion}
         </div>
       )}
 
@@ -122,10 +176,41 @@ export default async function ComplejoDetallePage({
                     cancha={cancha}
                     fechaInicial={filtros.fecha}
                     bloqueo={textoBloqueo}
+                    nivel={nivel}
                   />
                 )
               })}
             </div>
+          )}
+
+          {opiniones.length > 0 && (
+            <>
+              <h2 className="font-heading mt-9 mb-3.5 px-1 text-xl font-bold">
+                Lo que dicen los jugadores
+              </h2>
+              <div className="space-y-3.5">
+                {opiniones.map((opinion) => (
+                  <div key={opinion.id} className="bg-card shadow-card rounded-2xl p-5">
+                    <div className="flex items-center gap-3">
+                      <span className="bg-primary/12 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+                        {iniciales(opinion.jugador.nombre)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        {/* Solo el nombre de pila: no hace falta mostrar el apellido */}
+                        <p className="truncate font-semibold">
+                          {opinion.jugador.nombre.split(' ')[0]}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          {haceCuanto(momentoActual(opinion.createdAt).dia)}
+                        </p>
+                      </div>
+                      <PuntajeEnEstrellas puntaje={opinion.puntaje} />
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed">{opinion.comentario}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </section>
 

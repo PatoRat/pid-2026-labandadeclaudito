@@ -1,14 +1,17 @@
 import Link from 'next/link'
-import { BellRing, Building2, ChevronRight, CircleCheck, Scale } from 'lucide-react'
+import { BellRing, Building2, ChevronRight, CircleCheck, Scale, Ticket } from 'lucide-react'
 
 // La protagonista del panel del admin: lo que espera una decisión suya
-// (disputas abiertas y complejos por aprobar). Si hay algo pendiente va en
-// rojo y con la campana sacudiéndose, para que no se pase por alto.
+// (disputas abiertas, complejos por aprobar y tickets que el jugador respondió).
+// Si hay algo pendiente va en rojo y con la campana sacudiéndose, para que no
+// se pase por alto.
 export function ParaResolver({
   disputasAbiertas,
   antiguedadDeLaDisputa,
   complejosPorAprobar,
   antiguedadDelComplejo,
+  ticketsPorResolver,
+  antiguedadDelTicket,
 }: {
   disputasAbiertas: number
   // "hoy", "ayer", "hace 4 días": cuánto espera la disputa más vieja
@@ -16,8 +19,11 @@ export function ParaResolver({
   complejosPorAprobar: number
   // Lo mismo para el complejo que espera hace más tiempo
   antiguedadDelComplejo: string
+  ticketsPorResolver: number
+  // Lo mismo para el ticket respondido que espera hace más tiempo
+  antiguedadDelTicket: string
 }) {
-  const total = disputasAbiertas + complejosPorAprobar
+  const total = disputasAbiertas + complejosPorAprobar + ticketsPorResolver
 
   if (total === 0) {
     return (
@@ -92,6 +98,27 @@ export function ParaResolver({
             </span>
             <span className="bg-destructive inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2.5 font-bold text-white tabular-nums">
               {complejosPorAprobar}
+            </span>
+            <ChevronRight className="text-muted-foreground size-5 shrink-0" />
+          </Link>
+        )}
+
+        {ticketsPorResolver > 0 && (
+          <Link
+            href="/admin/tickets"
+            className="hover:bg-destructive/5 -mx-3 flex items-center gap-4 rounded-2xl px-3 py-3 transition-colors"
+          >
+            <span className="bg-destructive/10 text-destructive flex size-11 shrink-0 items-center justify-center rounded-xl">
+              <Ticket className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Tickets respondidos</span>
+              <span className="text-muted-foreground block text-sm">
+                El más viejo, {antiguedadDelTicket}
+              </span>
+            </span>
+            <span className="bg-destructive inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2.5 font-bold text-white tabular-nums">
+              {ticketsPorResolver}
             </span>
             <ChevronRight className="text-muted-foreground size-5 shrink-0" />
           </Link>

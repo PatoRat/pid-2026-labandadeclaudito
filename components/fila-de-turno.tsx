@@ -18,6 +18,7 @@ export function FilaDeTurno({
   horaFin,
   deporte,
   detalle,
+  nota,
   children,
 }: {
   href: string
@@ -27,6 +28,8 @@ export function FilaDeTurno({
   horaFin: string
   deporte: Deporte
   detalle: string
+  // Renglón chico extra bajo el detalle (ej: cuántos jugadores faltan)
+  nota?: React.ReactNode
   children: React.ReactNode
 }) {
   // Arriba del número va "Hoy", "Mañana" o el día de la semana.
@@ -86,6 +89,7 @@ export function FilaDeTurno({
           <EtiquetaDeporte deporte={deporte} />
         </div>
         <p className="text-muted-foreground mt-0.5 truncate text-sm">{detalle}</p>
+        {nota && <p className="text-muted-foreground truncate text-sm">{nota}</p>}
       </div>
 
       {children}

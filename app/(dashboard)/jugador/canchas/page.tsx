@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ImageIcon, X } from 'lucide-react'
 import { formatPrecio } from '@/lib/labels'
 import { activeFilterChips, filtersToQueryString, searchComplexes } from '@/lib/court-search'
+import { getPartidosAbiertos } from '@/lib/partidos-abiertos'
+import { TarjetaPartidoAbierto } from '@/components/tarjeta-partido-abierto'
 import { searchCourtsSchema } from '@/lib/validations/court-search'
 import { clasesGrillaAdaptable } from '@/lib/grid-columns'
 import { deportesDistintos, precioMasBajo } from '@/lib/resumen-complejo'
@@ -18,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { SearchFiltersSheet } from '@/components/search-filters-sheet'
 import { FiltrosDeBusqueda } from '@/components/filtros-de-busqueda'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
+import { Estrellas } from '@/components/estrellas'
 import { EstadoVacio } from '@/components/estado-vacio'
 import { AvisoBloqueo } from '@/components/aviso-bloqueo'
 
@@ -25,18 +28,29 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
   const session = await auth()
   if (!session) redirect('/login')
 
-  const filtros = searchCourtsSchema.parse(await searchParams)
-
-  const complejos = await searchComplexes(filtros, session.user.id)
+  const sp = await searchParams
+  const filtros = searchCourtsSchema.parse(sp)
+  // Modo "ver reservas incompletas": el schema ignora este parámetro, se lee aparte
+  const verIncompletas = sp.incompletas === '1'
 
   const filtrosAplicados = activeFilterChips(filtros)
+
+  // Arma un link conservando el modo actual (incompletas o no)
+  function urlConModo(queryString: string) {
+    if (!verIncompletas) return `/jugador/canchas${queryString}`
+    return `/jugador/canchas${queryString === '' ? '?' : `${queryString}&`}incompletas=1`
+  }
+
+  // En modo incompletas se traen las reservas abiertas; si no, los complejos.
+  const partidos = verIncompletas ? await getPartidosAbiertos(session.user.id, filtros) : []
+  const complejos = verIncompletas ? [] : await searchComplexes(filtros, session.user.id)
 
   // Los bloqueos se avisan solo si el jugador eligió un día: sin fecha no hay
   // un día del que hablar (otro día esa cancha puede estar libre). Y si eligió
   // horario, cuentan solo los que caen en ese horario. En gris va solo el
   // complejo que ese día no tiene ningún turno porque está todo bloqueado.
   let bloqueos: BloqueoDelDia[] = []
-  if (filtros.fecha !== undefined) {
+  if (!verIncompletas && filtros.fecha !== undefined) {
     const idsDeCanchas: string[] = []
     for (const complejo of complejos) {
       for (const cancha of complejo.canchas) {
@@ -67,18 +81,26 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
         <aside className="hidden xl:block">
           <div className="bg-card shadow-card rounded-3xl px-5 pt-5">
             <h2 className="font-heading mb-5 text-xl font-bold">Filtros</h2>
-            <FiltrosDeBusqueda filtros={filtros} idPrefijo="lateral-" />
+            <FiltrosDeBusqueda
+              filtros={filtros}
+              idPrefijo="lateral-"
+              incompletas={verIncompletas}
+            />
           </div>
         </aside>
 
         <section>
           <div className="flex flex-wrap items-center gap-2">
-            <SearchFiltersSheet filtros={filtros} cantidadDeFiltros={filtrosAplicados.length} />
+            <SearchFiltersSheet
+              filtros={filtros}
+              cantidadDeFiltros={filtrosAplicados.length}
+              incompletas={verIncompletas}
+            />
 
             {filtrosAplicados.map((filtro) => (
               <Link
                 key={filtro.label}
-                href={`/jugador/canchas${filtersToQueryString(filtro.withoutIt)}`}
+                href={urlConModo(filtersToQueryString(filtro.withoutIt))}
                 aria-label={`Quitar filtro ${filtro.label}`}
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/70 inline-flex items-center gap-1.5 rounded-full py-1.5 pr-2.5 pl-3.5 text-sm transition-colors"
               >
@@ -88,13 +110,30 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
             ))}
 
             {filtrosAplicados.length > 0 && (
-              <Button variant="ghost" size="sm" render={<Link href="/jugador/canchas" />}>
+              <Button variant="ghost" size="sm" render={<Link href={urlConModo('')} />}>
                 Limpiar todo
               </Button>
             )}
           </div>
 
-          {complejos.length === 0 ? (
+          {verIncompletas ? (
+            partidos.length === 0 ? (
+              <div className={margenResultados}>
+                <EstadoVacio
+                  titulo="No hay reservas incompletas"
+                  texto="Cuando alguien deje un turno con lugar para sumarse, va a aparecer acá."
+                />
+              </div>
+            ) : (
+              <div className={`@container ${margenResultados}`}>
+                <div className={`grid gap-5 ${clasesGrillaAdaptable(partidos.length)}`}>
+                  {partidos.map((reserva) => (
+                    <TarjetaPartidoAbierto key={reserva.id} reserva={reserva} />
+                  ))}
+                </div>
+              </div>
+            )
+          ) : complejos.length === 0 ? (
             <div className={margenResultados}>
               <EstadoVacio
                 titulo="No encontramos canchas con esos filtros"
@@ -175,6 +214,12 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
                         <span className="text-muted-foreground mt-1 text-sm">
                           {complejo.direccion} · {complejo.zona}
                         </span>
+                        <div className="mt-1.5">
+                          <Estrellas
+                            promedio={complejo.calificacion.promedio}
+                            cantidad={complejo.calificacion.cantidad}
+                          />
+                        </div>
                         {resumenBloqueos && (
                           <div className="mt-1.5">
                             <AvisoBloqueo texto={resumenBloqueos} />
