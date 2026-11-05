@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Estrella } from '@/components/estrella'
+import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
 import { MAX_CARACTERES_COMENTARIO, rateComplexSchema } from '@/lib/validations/rating'
 
@@ -90,21 +92,23 @@ export function RateComplexDialog({
                   onMouseEnter={() => setPuntajeBajoElMouse(posicion)}
                   aria-label={posicion === 1 ? '1 estrella' : `${posicion} estrellas`}
                   aria-pressed={puntaje === posicion}
-                  className="focus-visible:ring-ring/50 rounded-lg p-1 transition-transform outline-none hover:scale-110 focus-visible:ring-3 active:scale-95"
+                  className={cn(
+                    'focus-visible:ring-ring/50 rounded-lg p-1 transition-transform duration-150 outline-none hover:scale-115 focus-visible:ring-3 active:scale-90',
+                    // La elegida queda un poco más grande: se nota cuál tocaste
+                    posicion === puntaje && 'scale-110',
+                  )}
                 >
-                  <Star
-                    className={
-                      posicion <= puntajeQueSeVe
-                        ? 'fill-highlight text-highlight size-10'
-                        : 'text-muted-foreground/40 size-10'
-                    }
-                  />
+                  <Estrella relleno={posicion <= puntajeQueSeVe ? 1 : 0} tamanio="size-10" />
                 </button>
               ))}
             </div>
-            <p className="text-muted-foreground h-5 text-sm font-medium">
-              {puntajeQueSeVe > 0 ? TEXTO_DEL_PUNTAJE[puntajeQueSeVe] : 'Tocá una estrella'}
-            </p>
+            {puntajeQueSeVe > 0 ? (
+              <p className="bg-highlight text-highlight-foreground rounded-full px-3 py-0.5 text-sm font-bold">
+                {TEXTO_DEL_PUNTAJE[puntajeQueSeVe]}
+              </p>
+            ) : (
+              <p className="text-muted-foreground py-0.5 text-sm font-medium">Tocá una estrella</p>
+            )}
           </div>
 
           <div className="space-y-2">

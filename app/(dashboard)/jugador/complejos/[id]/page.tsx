@@ -186,7 +186,7 @@ export default async function ComplejoDetallePage({
           {opiniones.length > 0 && (
             <>
               <h2 className="font-heading mt-9 mb-3.5 px-1 text-xl font-bold">
-                Lo que dicen los jugadores
+                Opiniones de los jugadores del complejo
               </h2>
               <div className="space-y-3.5">
                 {opiniones.map((opinion) => (

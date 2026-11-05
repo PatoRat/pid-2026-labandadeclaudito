@@ -36,11 +36,7 @@ export default async function PerfilPage() {
 
   return (
     <main>
-      <h1 className="font-heading text-4xl font-bold tracking-tight">Mi perfil</h1>
-      <p className="text-muted-foreground mt-1">
-        Cambiá tus datos y tu foto. Así te ven en TocaYJuga.
-      </p>
-      <div className="mt-6 max-w-3xl">
+      <div className="max-w-3xl">
         <PerfilForm usuario={usuario} volverA={homePorRol(session.user.rol)} />
       </div>
 

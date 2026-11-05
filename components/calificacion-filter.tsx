@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Star } from 'lucide-react'
+import { Estrella } from '@/components/estrella'
 
 // Filtro de calificación mínima: cinco estrellas en fila. Pasar el mouse por la
-// estrella N previsualiza en amarillo oscuro el relleno de 1 a N; al hacer clic
-// queda elegido ese mínimo y el relleno pasa a amarillo claro. Clic en la
+// estrella N previsualiza (más transparente) el relleno de 1 a N; al hacer clic
+// queda elegido ese mínimo. Clic en la
 // estrella ya elegida vuelve a "sin mínimo".
 // Es un form GET, así que la estrella elegida solo cambia el estado y un input
 // oculto lleva el valor a la URL (mismo patrón que time-range-filter.tsx).
@@ -32,15 +32,6 @@ export function CalificacionFilter({
         {estrellas.map((valor) => {
           // Mientras hay hover manda el hover; si no, la elegida
           const llena = hover > 0 ? valor <= hover : valor <= minimo
-          // Oscura al previsualizar con el mouse, clara cuando ya está elegida
-          let clase = 'text-muted-foreground/40'
-          if (llena) {
-            clase =
-              hover > 0
-                ? 'fill-highlight text-highlight brightness-75'
-                : 'fill-highlight text-highlight'
-          }
-
           return (
             <button
               key={valor}
@@ -50,7 +41,10 @@ export function CalificacionFilter({
               onMouseEnter={() => setHover(valor)}
               onClick={() => elegir(valor)}
             >
-              <Star className={`size-7 transition-colors ${clase}`} />
+              {/* Más transparente mientras es solo la vista previa del mouse */}
+              <span className={hover > 0 ? 'opacity-70' : undefined}>
+                <Estrella relleno={llena ? 1 : 0} tamanio="size-7" />
+              </span>
             </button>
           )
         })}

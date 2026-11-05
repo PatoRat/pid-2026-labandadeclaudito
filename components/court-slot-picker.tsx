@@ -506,8 +506,8 @@ export function CourtSlotPicker({
                 {descuentoSeleccionado > 0 && (
                   <p className="flex justify-between gap-3">
                     <span>
-                      Descuento {nivel.nombre} ({nivel.descuento}%)
-                      <span className="text-muted-foreground"> · lo paga TocaYJuga</span>
+                      Beneficio de tu nivel {nivel.nombre}
+                      <span className="text-muted-foreground"> ({nivel.descuento}%)</span>
                     </span>
                     <span className="text-primary font-semibold">
                       −{formatPrecio(descuentoSeleccionado)}
