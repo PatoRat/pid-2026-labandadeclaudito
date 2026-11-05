@@ -19,6 +19,7 @@ import { formatPrecio } from '@/lib/labels'
 import { textoJugadoresFaltantes } from '@/lib/jugadores'
 import { montoDelHistorial, type MontoDelHistorial } from '@/lib/historial'
 import { estadoDeReserva, sePuedeCalificar, venceLaSena } from '@/lib/estado-reserva'
+import { puntosDelPartido } from '@/lib/gamificacion'
 import { EtiquetarAmigos } from '@/components/etiquetar-amigos'
 import { calcularPagina } from '@/lib/paginacion'
 import { diaEnPalabras } from '@/lib/fechas'
@@ -318,6 +319,19 @@ function FilaReserva({
   // La consulta trae solo la del jugador logueado: hay una o ninguna
   const miCalificacion = reserva.calificaciones[0]
 
+  // Lo que le dio este partido al jugador (se muestra debajo del estado)
+  const puntosDelTurno = puntosDelPartido(
+    {
+      ...turno,
+      propio: !esParticipante,
+      jugadores: reserva.jugadores,
+      complejoId: reserva.cancha.complejoId,
+      calificado: miCalificacion !== undefined,
+      etiquetado: false,
+    },
+    ahora,
+  )
+
   // Etiquetar amigos: solo el que reservó, en una reserva que ya se jugó. No
   // aparece en canceladas (conDisputa marca la vista historial) ni para el que
   // se sumó al partido de otro.
@@ -354,6 +368,16 @@ function FilaReserva({
           horaFin={reserva.horaFin}
           ahoraInicial={ahora}
         />
+        {puntosDelTurno > 0 && (
+          <span className="bg-highlight text-highlight-foreground mt-1.5 block w-fit rounded-full px-2 py-0.5 text-xs font-bold">
+            +{puntosDelTurno} pts
+          </span>
+        )}
+        {puntosDelTurno < 0 && (
+          <span className="bg-destructive/10 text-destructive mt-1.5 block w-fit rounded-full px-2 py-0.5 text-xs font-bold">
+            {puntosDelTurno} pts
+          </span>
+        )}
       </TableCell>
       <TableCell className={conDisputa ? 'px-3' : 'px-3 pr-4'}>
         <CeldaMonto monto={monto} />

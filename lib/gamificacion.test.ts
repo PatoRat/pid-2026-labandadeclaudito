@@ -6,6 +6,7 @@ import {
   montoDelDescuento,
   nivelDe,
   puntosDe,
+  puntosDelPartido,
   rankingDelMes,
   type PartidoDelJugador,
 } from './gamificacion'
@@ -247,5 +248,19 @@ describe('progreso de las insignias', () => {
     const cuatro = Array.from({ length: 4 }, () => partido())
     expect(progresoDe('palabra', cuatro)).toBe(4)
     expect(progresoDe('palabra', [...cuatro, partido({ asistio: false })])).toBe(0)
+  })
+})
+
+describe('puntosDelPartido', () => {
+  test('un partido propio calificado suma 13', () => {
+    expect(puntosDelPartido(partido({ calificado: true }), ahora)).toBe(13)
+  })
+
+  test('un no-show resta 20', () => {
+    expect(puntosDelPartido(partido({ asistio: false }), ahora)).toBe(-20)
+  })
+
+  test('un partido que todavía no se jugó no suma', () => {
+    expect(puntosDelPartido(partido({ dia: '2026-11-10' }), ahora)).toBe(0)
   })
 })

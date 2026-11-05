@@ -234,6 +234,13 @@ export function rankingDelMes(
     .sort((a, b) => b.puntosDelMes - a.puntosDelMes || a.nombre.localeCompare(b.nombre))
 }
 
+// Lo que sumó (o restó) un solo partido: mismas reglas que el total, así el
+// "+15 pts" de cada fila del historial siempre cierra con el total del perfil.
+// 0 si todavía no se jugó o se canceló.
+export function puntosDelPartido(partido: PartidoDelJugador, ahora = momentoActual()): number {
+  return puntosDe(estadisticasDelJugador([partido], ahora))
+}
+
 // Atajo para el caso más común: los puntos de una lista de partidos, hoy
 export function puntosDeLosPartidos(partidos: PartidoDelJugador[]): number {
   return puntosDe(estadisticasDelJugador(partidos))
