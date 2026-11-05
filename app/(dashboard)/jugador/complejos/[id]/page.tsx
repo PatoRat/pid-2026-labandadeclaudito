@@ -17,7 +17,6 @@ import {
   type BloqueoDelDia,
 } from '@/lib/blocks'
 import { diaEnPalabras } from '@/lib/fechas'
-import { nivelDe } from '@/lib/gamificacion'
 import { puntosDeJugadores } from '@/lib/puntos-del-jugador'
 import { CourtCard } from '@/components/court-card'
 import { ComplexGallery } from '@/components/complex-gallery'
@@ -57,9 +56,9 @@ export default async function ComplejoDetallePage({
   // Con coma decimal, como se escribe acá: 4,3
   const promedioEnTexto = promedio.toFixed(1).replace('.', ',')
 
-  // El nivel define el descuento que se muestra al reservar (el server lo
-  // vuelve a calcular al crear la reserva: no se confía en este)
-  const { actual: nivel } = nivelDe(puntosPorJugador.get(session.user.id) ?? 0)
+  // Los puntos definen el nivel y el beneficio que se muestran al reservar (el
+  // server lo vuelve a calcular al crear la reserva: no se confía en este)
+  const puntos = puntosPorJugador.get(session.user.id) ?? 0
 
   // Una cancha puede tener su propio porcentaje de seña: el número se muestra
   // solo si es el mismo en todas.
@@ -176,7 +175,7 @@ export default async function ComplejoDetallePage({
                     cancha={cancha}
                     fechaInicial={filtros.fecha}
                     bloqueo={textoBloqueo}
-                    nivel={nivel}
+                    puntos={puntos}
                   />
                 )
               })}

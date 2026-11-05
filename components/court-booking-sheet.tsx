@@ -15,7 +15,6 @@ import { CourtSlotPicker } from '@/components/court-slot-picker'
 import { DibujoDeCancha } from '@/components/dibujo-de-cancha'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
 import { formatPrecio } from '@/lib/labels'
-import type { Nivel } from '@/lib/gamificacion'
 
 export function CourtBookingSheet({
   courtId,
@@ -27,7 +26,7 @@ export function CourtBookingSheet({
   fechaInicial,
   className,
   otroDia,
-  nivel,
+  puntos,
 }: {
   courtId: string
   courtName: string
@@ -39,7 +38,8 @@ export function CourtBookingSheet({
   className?: string
   // La cancha está bloqueada el día buscado: el botón invita a elegir otro
   otroDia?: boolean
-  nivel: Nivel
+  // Puntos del jugador: de ahí salen su nivel y su beneficio al reservar
+  puntos: number
 }) {
   return (
     <Sheet>
@@ -86,7 +86,7 @@ export function CourtBookingSheet({
             capacidad={capacidad}
             precioBase={precioBase}
             fechaInicial={fechaInicial}
-            nivel={nivel}
+            puntos={puntos}
           />
         </div>
       </SheetContent>
