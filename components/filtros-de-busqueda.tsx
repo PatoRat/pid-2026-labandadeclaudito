@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bell, Calendar, Search, Wallet } from 'lucide-react'
+import { Bell, Calendar, Search, Star, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { filtersToQueryString } from '@/lib/court-search-url'
 import { diaDeHoy, ultimoDiaParaReservar } from '@/lib/time'
+import { CalificacionFilter } from '@/components/calificacion-filter'
 import { SportSurfaceFilter } from '@/components/sport-surface-filter'
 import { TimeRangeFilter } from '@/components/time-range-filter'
 import { ZonaFilter } from '@/components/zona-filter'
@@ -78,6 +79,14 @@ export function FiltrosDeBusqueda({
             deporteInicial={filtros.deporte}
             tipoSuperficieInicial={filtros.tipoSuperficie}
           />
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+            <Star className="size-4" />
+            Calificación mínima
+          </h3>
+          <CalificacionFilter calificacionMinInicial={filtros.calificacionMin} />
         </section>
 
         <section className="space-y-4">

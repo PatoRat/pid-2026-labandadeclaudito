@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { SearchFiltersSheet } from '@/components/search-filters-sheet'
 import { FiltrosDeBusqueda } from '@/components/filtros-de-busqueda'
 import { EtiquetaDeporte } from '@/components/etiqueta-deporte'
+import { Estrellas } from '@/components/estrellas'
 import { EstadoVacio } from '@/components/estado-vacio'
 import { AvisoBloqueo } from '@/components/aviso-bloqueo'
 
@@ -213,6 +214,12 @@ export default async function BusquedaCanchasPage({ searchParams }: PageProps<'/
                         <span className="text-muted-foreground mt-1 text-sm">
                           {complejo.direccion} · {complejo.zona}
                         </span>
+                        <div className="mt-1.5">
+                          <Estrellas
+                            promedio={complejo.calificacion.promedio}
+                            cantidad={complejo.calificacion.cantidad}
+                          />
+                        </div>
                         {resumenBloqueos && (
                           <div className="mt-1.5">
                             <AvisoBloqueo texto={resumenBloqueos} />

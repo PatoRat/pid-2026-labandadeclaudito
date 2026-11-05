@@ -10,6 +10,8 @@ export function filtersToQueryString(filtros: SearchCourtsFilters): string {
   if (filtros.zona !== undefined) params.set('zona', filtros.zona)
   if (filtros.deporte !== undefined) params.set('deporte', filtros.deporte)
   if (filtros.tipoSuperficie !== undefined) params.set('tipoSuperficie', filtros.tipoSuperficie)
+  if (filtros.calificacionMin !== undefined)
+    params.set('calificacionMin', String(filtros.calificacionMin))
   if (filtros.precioMin !== undefined) params.set('precioMin', String(filtros.precioMin))
   if (filtros.precioMax !== undefined) params.set('precioMax', String(filtros.precioMax))
   if (filtros.fecha !== undefined) params.set('fecha', filtros.fecha)
