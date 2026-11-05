@@ -5,7 +5,7 @@ import { PerfilForm } from '@/components/perfil-form'
 import { TarjetaNivel } from '@/components/tarjeta-nivel'
 import { InsigniasDelJugador } from '@/components/insignias-del-jugador'
 import { homePorRol } from '@/lib/home-por-rol'
-import { estadisticasDelJugador, insigniasGanadas, puntosDe } from '@/lib/gamificacion'
+import { estadisticasDelJugador, puntosDe } from '@/lib/gamificacion'
 import { getPartidosDeJugadores } from '@/lib/partidos-de-jugadores'
 import { getPenalizacionDeJugadores } from '@/lib/tickets'
 
@@ -49,7 +49,7 @@ export default async function PerfilPage() {
           </p>
           <div className="mt-5 space-y-5">
             <TarjetaNivel puntos={puntosDelNivel} />
-            <InsigniasDelJugador ganadas={insigniasGanadas(estadisticas).map((i) => i.id)} />
+            <InsigniasDelJugador estadisticas={estadisticas} />
           </div>
         </section>
       )}

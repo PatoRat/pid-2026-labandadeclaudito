@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   estadisticasDelJugador,
+  INSIGNIAS,
   insigniasGanadas,
   montoDelDescuento,
   nivelDe,
@@ -227,5 +228,24 @@ describe('descuento de cada nivel', () => {
   test('Suplente no tiene, Leyenda el máximo', () => {
     expect(nivelDe(0).actual.descuento).toBe(0)
     expect(nivelDe(600).actual.descuento).toBe(20)
+  })
+})
+
+describe('progreso de las insignias', () => {
+  function progresoDe(id: string, partidos: PartidoDelJugador[]): number {
+    const insignia = INSIGNIAS.find((i) => i.id === id)
+    if (!insignia) throw new Error(`no existe la insignia ${id}`)
+    return insignia.progreso(estadisticasDelJugador(partidos, ahora))
+  }
+
+  test('Refuerzo cuenta los partidos de otros jugados', () => {
+    const tres = Array.from({ length: 3 }, () => partido({ propio: false }))
+    expect(progresoDe('refuerzo', tres)).toBe(3)
+  })
+
+  test('Palabra de jugador vuelve a cero con un no-show', () => {
+    const cuatro = Array.from({ length: 4 }, () => partido())
+    expect(progresoDe('palabra', cuatro)).toBe(4)
+    expect(progresoDe('palabra', [...cuatro, partido({ asistio: false })])).toBe(0)
   })
 })

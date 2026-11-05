@@ -140,48 +140,60 @@ export function montoDelDescuento(
   return Math.round(Math.min(descuento, enLaCancha) * 100) / 100
 }
 
+// Cada insignia tiene una meta y cuánto lleva el jugador hacia ella
+// (progreso). Se gana cuando el progreso llega a la meta. El progreso se
+// muestra como "3/5" en las que todavía no ganó.
 export const INSIGNIAS = [
   {
     id: 'debut',
     nombre: 'Debut',
     descripcion: 'Jugaste tu primer partido',
-    ganada: (e: EstadisticasDelJugador) => e.jugadosPropios + e.jugadosSumado >= 1,
+    meta: 1,
+    progreso: (e: EstadisticasDelJugador) => e.jugadosPropios + e.jugadosSumado,
   },
   {
     id: 'palabra',
     nombre: 'Palabra de jugador',
     descripcion: 'Jugaste 10 partidos sin faltar a ninguno',
-    ganada: (e: EstadisticasDelJugador) =>
-      e.jugadosPropios + e.jugadosSumado >= 10 && e.noShows === 0,
+    meta: 10,
+    // Faltar una vez la deja en cero: la gracia es no haber faltado nunca
+    progreso: (e: EstadisticasDelJugador) =>
+      e.noShows > 0 ? 0 : e.jugadosPropios + e.jugadosSumado,
   },
   {
     id: 'refuerzo',
     nombre: 'Refuerzo',
     descripcion: 'Te sumaste a 5 partidos de otros jugadores',
-    ganada: (e: EstadisticasDelJugador) => e.jugadosSumado >= 5,
+    meta: 5,
+    progreso: (e: EstadisticasDelJugador) => e.jugadosSumado,
   },
   {
     id: 'organizador',
     nombre: 'Organizador',
     descripcion: 'Publicaste 3 partidos con cupos libres',
-    ganada: (e: EstadisticasDelJugador) => e.abiertosJugados >= 3,
+    meta: 3,
+    progreso: (e: EstadisticasDelJugador) => e.abiertosJugados,
   },
   {
     id: 'trotamundos',
     nombre: 'Trotamundos',
     descripcion: 'Jugaste en 3 complejos distintos',
-    ganada: (e: EstadisticasDelJugador) => e.complejos >= 3,
+    meta: 3,
+    progreso: (e: EstadisticasDelJugador) => e.complejos,
   },
   {
     id: 'critico',
     nombre: 'Crítico',
     descripcion: 'Hiciste 5 calificaciones',
-    ganada: (e: EstadisticasDelJugador) => e.calificaciones >= 5,
+    meta: 5,
+    progreso: (e: EstadisticasDelJugador) => e.calificaciones,
   },
 ]
 
+export type Insignia = (typeof INSIGNIAS)[number]
+
 export function insigniasGanadas(e: EstadisticasDelJugador) {
-  return INSIGNIAS.filter((insignia) => insignia.ganada(e))
+  return INSIGNIAS.filter((insignia) => insignia.progreso(e) >= insignia.meta)
 }
 
 export type FilaDelRanking = {
