@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
-import { del } from '@vercel/blob'
+import { borrarArchivo } from '@/lib/archivos'
 import { PATCH as editarComplejo, DELETE as bajaComplejo } from '@/app/api/complexes/[id]/route'
 import { POST as subirFoto } from '@/app/api/complexes/[id]/images/route'
 import { POST as crearCanchas } from '@/app/api/complexes/[id]/courts/route'
@@ -43,7 +43,7 @@ afterAll(async () => {
 })
 
 beforeEach(() => {
-  vi.mocked(del).mockClear()
+  vi.mocked(borrarArchivo).mockClear()
 })
 
 async function reservarManiana(canchaId: string, horaInicio: string) {
@@ -226,7 +226,7 @@ describe('Baja lógica de un complejo (DELETE /api/complexes/[id])', () => {
   })
 
   test('las fotos no se borran de Vercel Blob (para poder reactivar)', () => {
-    expect(del).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
   })
 
   test('el complejo dado de baja ya no se puede operar (404)', async () => {

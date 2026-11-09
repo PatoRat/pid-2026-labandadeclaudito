@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
-import { del, put } from '@vercel/blob'
+import { borrarArchivo, guardarArchivo } from '@/lib/archivos'
 import { POST as crearComplejo } from '@/app/api/complexes/route'
 import { PATCH as editarComplejo } from '@/app/api/complexes/[id]/route'
 import { POST as subirFoto } from '@/app/api/complexes/[id]/images/route'
@@ -44,8 +44,8 @@ afterAll(async () => {
 })
 
 beforeEach(() => {
-  vi.mocked(put).mockClear()
-  vi.mocked(del).mockClear()
+  vi.mocked(guardarArchivo).mockClear()
+  vi.mocked(borrarArchivo).mockClear()
 })
 
 describe('Alta de complejo (POST /api/complexes)', () => {
@@ -125,7 +125,7 @@ describe('Fotos del complejo', () => {
     loginComo(duenio)
     const res = await subirFoto(imagenRequest(archivoImagen()), conParams({ id: complejoId }))
     expect(res.status).toBe(201)
-    expect(put).toHaveBeenCalledTimes(1)
+    expect(guardarArchivo).toHaveBeenCalledTimes(1)
 
     const fotos = await db.imagenComplejo.findMany({ where: { complejoId } })
     expect(fotos.length).toBe(1)
@@ -139,7 +139,7 @@ describe('Fotos del complejo', () => {
       conParams({ id: complejoId }),
     )
     expect(res.status).toBe(400)
-    expect(put).not.toHaveBeenCalled()
+    expect(guardarArchivo).not.toHaveBeenCalled()
   })
 
   test('otro dueño no puede subir fotos (404)', async () => {
@@ -159,7 +159,7 @@ describe('Fotos del complejo', () => {
     expect(sexta.status).toBe(409)
   })
 
-  test('quitar una foto la borra de la DB y del Blob', async () => {
+  test('quitar una foto la borra de la DB y del disco', async () => {
     loginComo(duenio)
     const foto = await db.imagenComplejo.findFirst({
       where: { complejoId },
@@ -171,7 +171,7 @@ describe('Fotos del complejo', () => {
       conParams({ id: complejoId, imageId: foto!.id }),
     )
     expect(res.status).toBe(200)
-    expect(del).toHaveBeenCalledWith(foto!.url)
+    expect(borrarArchivo).toHaveBeenCalledWith(foto!.url)
 
     const borrada = await db.imagenComplejo.findUnique({ where: { id: foto!.id } })
     expect(borrada).toBeNull()
@@ -186,7 +186,7 @@ describe('Fotos del complejo', () => {
       conParams({ id: complejoId, imageId: foto!.id }),
     )
     expect(res.status).toBe(404)
-    expect(del).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
   })
 
   test('una foto nueva queda después de la última, aunque haya huecos en el orden', async () => {

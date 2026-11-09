@@ -61,3 +61,6 @@ branch_context.md
 /docs
 # Serena MCP tool config (local, per-dev)
 /.serena
+
+# fotos subidas a mano en este fork (en el repo real van a Vercel Blob)
+/public/uploads

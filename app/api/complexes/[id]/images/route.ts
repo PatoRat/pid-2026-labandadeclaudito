@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 import { complexImageSchema, esImagenReal, MAX_IMAGES_PER_COMPLEX } from '@/lib/validations/complex'
 import { requireRole } from '@/lib/auth-helpers'
 import { getComplexByOwner } from '@/lib/ownership'
+import { guardarArchivo } from '@/lib/archivos'
 import { db } from '@/lib/db'
 
 // Se sube una foto por request: Vercel corta los bodies de más de 4.5 MB.
@@ -35,21 +35,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const archivo = parsed.data.imagen
 
-  // Si put() falla y no lo agarramos, Next devuelve un 500 con el body vacío
-  // y el cliente no puede mostrar ningún mensaje.
+  // Si guardarArchivo() falla y no lo agarramos, Next devuelve un 500 con el
+  // body vacío y el cliente no puede mostrar ningún mensaje.
   let urlDeLaFoto = ''
   try {
-    const blob = await put(`complejos/${complejoId}/${archivo.name}`, archivo, {
-      access: 'public',
-      addRandomSuffix: true,
-    })
-    urlDeLaFoto = blob.url
+    urlDeLaFoto = await guardarArchivo(`complejos/${complejoId}`, archivo)
   } catch (error) {
-    console.error('Error al subir la foto a Vercel Blob:', error)
-    return NextResponse.json(
-      { error: 'No se pudo guardar la foto. Revisá BLOB_READ_WRITE_TOKEN.' },
-      { status: 502 },
-    )
+    console.error('Error al guardar la foto en public/uploads:', error)
+    return NextResponse.json({ error: 'No se pudo guardar la foto.' }, { status: 502 })
   }
 
   // No se usa la cantidad como orden: al quitar fotos quedan huecos y se repetiría
