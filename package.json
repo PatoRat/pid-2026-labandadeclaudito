@@ -20,7 +20,8 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
-    "prepare": "git config core.hooksPath .githooks || exit 0"
+    "prepare": "git config core.hooksPath .githooks || exit 0",
+    "demo": "tsx scripts/demo.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -49,6 +50,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
+    "embedded-postgres": "^18.6.0-beta.19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "eslint-config-prettier": "^10.1.8",

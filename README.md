@@ -13,24 +13,43 @@ Proyecto de la materia PID — UCA.
 - Tailwind + shadcn/ui
 - Vercel Blob para imágenes
 
-## Setup
+## Ejecutarlo sin configurar nada
 
-Requisitos: Node 22+.
+Requisitos: Node 22+ e internet para el `npm install`.
 
 ```bash
 npm install
-cp .env.example .env          # completar DATABASE_URL y AUTH_SECRET (npx auth secret)
+npm run demo
+```
+
+Levanta un PostgreSQL propio del proyecto (binarios que baja npm, datos en
+`.postgres/`), aplica las migraciones, carga los datos de demo y arranca la app.
+No instala nada en el sistema ni pisa un Postgres que ya tengas. `Ctrl+C` corta
+todo. Detalle completo y usuarios de prueba en [COMO-EJECUTAR.md](COMO-EJECUTAR.md).
+
+## Setup para desarrollar
+
+```bash
+npm install
+cp .env.example .env          # completar DATABASE_URL y AUTH_SECRET
 npm run db:migrate            # aplica migraciones a la DB
+npm run db:seed               # datos de demo (ojo: borra todo lo que haya)
 npm run dev                   # http://localhost:3000
 ```
 
-Para `DATABASE_URL` usá cualquier Postgres: `npx create-db` (Prisma Postgres gratis),
-`npm run db:dev` (local, sin Docker), o un string de Neon/Supabase.
+Para `DATABASE_URL` sirve cualquier Postgres: uno instalado en la máquina, o un
+string de Neon/Supabase. Generá el `AUTH_SECRET` con
+`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+
+> `npm run db:dev` (`prisma dev`) **no sirve** para este proyecto: es PGlite y su
+> puerto TCP resetea las conexiones de `pg`, que es el driver que usa
+> `lib/db.ts`. Si no querés instalar Postgres, usá `npm run demo`.
 
 ## Scripts
 
 | Comando                    | Qué hace                                       |
 | -------------------------- | ---------------------------------------------- |
+| `npm run demo`             | Todo junto sin configurar nada (ver arriba)    |
 | `npm run dev`              | Servidor de desarrollo                         |
 | `npm run build`            | Build de producción                            |
 | `npm run lint`             | ESLint                                         |
@@ -38,6 +57,7 @@ Para `DATABASE_URL` usá cualquier Postgres: `npx create-db` (Prisma Postgres gr
 | `npm run typecheck`        | `tsc --noEmit`                                 |
 | `npm run db:dev`           | Postgres local sin Docker (`prisma dev`)       |
 | `npm run db:migrate`       | Crear/aplicar migración                        |
+| `npm run db:seed`          | Carga datos de demo (borra todo antes)         |
 | `npm run db:studio`        | GUI de la base (Prisma Studio)                 |
 | `npm run test`             | Corre los tests de lib/                        |
 | `npm run test:integration` | Corre los tests de tests/ escribiendo en la DB |
@@ -51,5 +71,6 @@ Para `DATABASE_URL` usá cualquier Postgres: `npx create-db` (Prisma Postgres gr
 
 ## Documentación
 
-- Plan de implementación Sprint 1: `docs/superpowers/plans/2026-09-09-sprint1-mvp.md`
-- Backlog: `docs/backlog-sprint1.md`
+- [COMO-EJECUTAR.md](COMO-EJECUTAR.md) — cómo levantarlo y usuarios de prueba
+- [CLAUDE.md](CLAUDE.md) — convenciones del equipo
+- Tickets y planes de sprint: en Jira (`docs/` es local y no se pushea)
