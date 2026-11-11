@@ -162,34 +162,35 @@ async function main() {
   await borrarTodo()
 
   // ----- Usuarios -----
-  // Los "admin" son dueños de complejos (no existe un rol admin aparte)
-  const adminDemo = await crearUsuario(
+  // Dos dueños de complejos y dos jugadores. Todos con el mismo dominio y
+  // numerados, así se sabe de memoria con qué entrar.
+  const duenio1 = await crearUsuario(
     'Martín Gómez',
-    'admin@demo.com',
-    'Admin1234',
+    'dueno1@tocayjuga.com',
+    'Dueno1234',
     'DUENIO',
     '30111222',
     '11 4775-1234',
   )
-  const adminDev = await crearUsuario(
+  const duenio2 = await crearUsuario(
     'Laura Fernández',
-    'admin@dev.com',
-    'Admin1234',
+    'dueno2@tocayjuga.com',
+    'Dueno1234',
     'DUENIO',
     '31222333',
     '11 4983-5566',
   )
-  const jugadorDemo = await crearUsuario(
+  const jugador1 = await crearUsuario(
     'Juan Pérez',
-    'jugador@demo.com',
+    'jugador1@tocayjuga.com',
     'Jugador1234',
     'JUGADOR',
     '40111222',
     '11 6000-1111',
   )
-  const jugadorDev = await crearUsuario(
+  const jugador2 = await crearUsuario(
     'Camila Rodríguez',
-    'jugador@dev.com',
+    'jugador2@tocayjuga.com',
     'Jugador1234',
     'JUGADOR',
     '41222333',
@@ -207,7 +208,7 @@ async function main() {
     '11 4000-0000',
   )
 
-  // ----- Complejo 1: Palermo (admin@demo.com) -----
+  // ----- Complejo 1: Palermo (dueno1@tocayjuga.com) -----
   // Seña 30%, reservar con 3 hs de anticipación, cancelar con 24 hs
   const palermo = await db.complejo.create({
     data: {
@@ -215,7 +216,7 @@ async function main() {
       direccion: 'Av. Santa Fe 4321',
       zona: 'Palermo',
       contacto: '11 4775-1234',
-      duenioId: adminDemo.id,
+      duenioId: duenio1.id,
       estadoAprobacion: 'APROBADO',
       porcentajeSenaDefault: 30,
       minAdvanceMinutesDefault: 180,
@@ -318,7 +319,7 @@ async function main() {
     ],
   })
 
-  // ----- Complejo 2: Villa Urquiza (admin@demo.com) -----
+  // ----- Complejo 2: Villa Urquiza (dueno1@tocayjuga.com) -----
   // Seña 50%, sin anticipación mínima, cancelar con 48 hs
   const urquiza = await db.complejo.create({
     data: {
@@ -326,7 +327,7 @@ async function main() {
       direccion: 'Av. Triunvirato 4950',
       zona: 'Villa Urquiza',
       contacto: '11 4521-9090',
-      duenioId: adminDemo.id,
+      duenioId: duenio1.id,
       estadoAprobacion: 'APROBADO',
       porcentajeSenaDefault: 50,
       minAdvanceMinutesDefault: 0,
@@ -386,7 +387,7 @@ async function main() {
     minAdvanceMinutes: 60,
   })
 
-  // ----- Complejo 3: Caballito (admin@dev.com) -----
+  // ----- Complejo 3: Caballito (dueno2@tocayjuga.com) -----
   // Seña 25%, 2 hs de anticipación, cancelar con 12 hs
   const caballito = await db.complejo.create({
     data: {
@@ -394,7 +395,7 @@ async function main() {
       direccion: 'Av. Rivadavia 5200',
       zona: 'Caballito',
       contacto: '11 4983-5566',
-      duenioId: adminDev.id,
+      duenioId: duenio2.id,
       estadoAprobacion: 'APROBADO',
       porcentajeSenaDefault: 25,
       minAdvanceMinutesDefault: 120,
@@ -441,14 +442,14 @@ async function main() {
     duracionTurnoMin: 60,
   })
 
-  // ----- Complejo 4: Olivos (admin@dev.com) -----
+  // ----- Complejo 4: Olivos (dueno2@tocayjuga.com) -----
   const olivos = await db.complejo.create({
     data: {
       nombre: 'Fútbol Norte Olivos',
       direccion: 'Av. Maipú 2800',
       zona: 'Olivos',
       contacto: '11 4799-3030',
-      duenioId: adminDev.id,
+      duenioId: duenio2.id,
       estadoAprobacion: 'APROBADO',
       porcentajeSenaDefault: 30,
       minAdvanceMinutesDefault: 180,
@@ -495,14 +496,14 @@ async function main() {
     activo: false,
   })
 
-  // ----- Complejo 5: dado de baja (admin@dev.com) -----
+  // ----- Complejo 5: dado de baja (dueno2@tocayjuga.com) -----
   const boedo = await db.complejo.create({
     data: {
       nombre: 'Complejo Boedo',
       direccion: 'Av. Boedo 1450',
       zona: 'Boedo',
       contacto: '11 4932-1212',
-      duenioId: adminDev.id,
+      duenioId: duenio2.id,
       estadoAprobacion: 'APROBADO',
       activo: false,
     },
@@ -519,11 +520,11 @@ async function main() {
     activo: false,
   })
 
-  // ----- Reservas de jugador@demo.com: una de cada estado -----
+  // ----- Reservas de jugador1@tocayjuga.com: una de cada estado -----
   // Ya jugada, asistió
   await crearReserva({
     canchaId: palermo1.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -14,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -533,17 +534,17 @@ async function main() {
   // Ya jugada, no se presentó (seña perdida)
   await crearReserva({
     canchaId: urquizaTenis1.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -7,
     horaInicio: '18:00',
     estado: 'CONFIRMADA',
     sena: 'pagada',
     asistio: false,
   })
-  // Ya jugada sin marcar asistencia: admin@demo.com la puede marcar
+  // Ya jugada sin marcar asistencia: dueno1@tocayjuga.com la puede marcar
   await crearReserva({
     canchaId: palermo3.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -2,
     horaInicio: '21:00',
     estado: 'CONFIRMADA',
@@ -553,7 +554,7 @@ async function main() {
   const horaActual = momentoActual().hora.slice(0, 2) + ':00'
   await crearReserva({
     canchaId: caballito24.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 0,
     horaInicio: horaActual,
     estado: 'CONFIRMADA',
@@ -563,7 +564,7 @@ async function main() {
   // puede reservar otra cancha ese día a las 20 (superposición)
   await crearReserva({
     canchaId: palermo1.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 3,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -573,7 +574,7 @@ async function main() {
   // Pagó cuando la política era de 72 hs: vale la más corta (48)
   await crearReserva({
     canchaId: urquizaF11.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 1,
     horaInicio: '17:30',
     estado: 'CONFIRMADA',
@@ -583,7 +584,7 @@ async function main() {
   // Pendiente de seña recién pedida: hay 15 minutos para pagarla
   await crearReserva({
     canchaId: olivosA.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 2,
     horaInicio: '19:00',
     estado: 'PENDIENTE',
@@ -592,7 +593,7 @@ async function main() {
   // Canceladas: con seña devuelta, con seña perdida y sin seña
   await crearReserva({
     canchaId: palermo2.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -5,
     horaInicio: '19:00',
     estado: 'CANCELADA',
@@ -600,7 +601,7 @@ async function main() {
   })
   await crearReserva({
     canchaId: urquizaPadel.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -3,
     horaInicio: '20:00',
     estado: 'CANCELADA',
@@ -608,7 +609,7 @@ async function main() {
   })
   await crearReserva({
     canchaId: caballitoBasquet.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 5,
     horaInicio: '19:00',
     estado: 'CANCELADA',
@@ -616,7 +617,7 @@ async function main() {
   // En el complejo dado de baja: una jugada y una futura cancelada por la baja
   await crearReserva({
     canchaId: boedoCancha.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: -20,
     horaInicio: '21:00',
     estado: 'CONFIRMADA',
@@ -625,18 +626,18 @@ async function main() {
   })
   await crearReserva({
     canchaId: boedoCancha.id,
-    jugadorId: jugadorDemo.id,
+    jugadorId: jugador1.id,
     diasDesdeHoy: 4,
     horaInicio: '21:00',
     estado: 'CANCELADA',
     sena: 'devuelta',
   })
 
-  // ----- Reservas de jugador@dev.com -----
+  // ----- Reservas de jugador2@tocayjuga.com -----
   // Turno nocturno con precio especial de franja
   await crearReserva({
     canchaId: palermo1.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 1,
     horaInicio: '21:00',
     estado: 'CONFIRMADA',
@@ -645,7 +646,7 @@ async function main() {
   // Turno que termina a medianoche
   await crearReserva({
     canchaId: caballitoNocturna.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 2,
     horaInicio: '23:00',
     estado: 'CONFIRMADA',
@@ -654,7 +655,7 @@ async function main() {
   // Turno corto de 30 min: precio proporcional
   await crearReserva({
     canchaId: urquizaF11.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 6,
     horaInicio: '20:30',
     estado: 'CONFIRMADA',
@@ -663,7 +664,7 @@ async function main() {
   // Precio congelado más barato que el actual de la cancha
   await crearReserva({
     canchaId: palermo1.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 10,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -672,7 +673,7 @@ async function main() {
   })
   await crearReserva({
     canchaId: caballitoBasquet.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: -1,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -682,7 +683,7 @@ async function main() {
   // En la cancha dada de baja de Olivos
   await crearReserva({
     canchaId: olivosCerrada.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: -6,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -693,7 +694,7 @@ async function main() {
   // y se borra con el próximo POST /api/bookings
   await crearReserva({
     canchaId: palermo3.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 4,
     horaInicio: '20:00',
     estado: 'PENDIENTE',
@@ -702,17 +703,17 @@ async function main() {
 
   await crearReserva({
     canchaId: palermo1.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: -14,
     horaInicio: '21:00',
     estado: 'CONFIRMADA',
     sena: 'pagada',
     asistio: true,
   })
-  // Otra sin marcar asistencia, para admin@demo.com
+  // Otra sin marcar asistencia, para dueno1@tocayjuga.com
   await crearReserva({
     canchaId: palermo2.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: -1,
     horaInicio: '18:00',
     estado: 'CONFIRMADA',
@@ -720,7 +721,7 @@ async function main() {
   })
   await crearReserva({
     canchaId: palermo2.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 1,
     horaInicio: '20:00',
     estado: 'CONFIRMADA',
@@ -728,16 +729,16 @@ async function main() {
   })
   await crearReserva({
     canchaId: urquizaTenis2.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: 2,
     horaInicio: '10:00',
     estado: 'CONFIRMADA',
     sena: 'pagada',
   })
-  // Sin marcar asistencia, para admin@dev.com
+  // Sin marcar asistencia, para dueno2@tocayjuga.com
   await crearReserva({
     canchaId: caballitoNocturna.id,
-    jugadorId: jugadorDev.id,
+    jugadorId: jugador2.id,
     diasDesdeHoy: -3,
     horaInicio: '22:00',
     estado: 'CONFIRMADA',
@@ -747,13 +748,16 @@ async function main() {
   console.log(`
 Seed listo (se borró todo lo que había antes).
 
-  DUEÑOS (Admin1234)
-  admin@demo.com    La Canchita de Palermo + Club Atlético Villa Urquiza
-  admin@dev.com     Polideportivo Caballito + Fútbol Norte Olivos + Complejo Boedo (dado de baja)
+  DUEÑOS (Dueno1234)
+  dueno1@tocayjuga.com    La Canchita de Palermo + Club Atlético Villa Urquiza
+  dueno2@tocayjuga.com    Polideportivo Caballito + Fútbol Norte Olivos + Complejo Boedo (de baja)
 
   JUGADORES (Jugador1234)
-  jugador@demo.com  una reserva de cada estado (la pendiente vence en 15 min)
-  jugador@dev.com   turnos nocturnos, turno corto, precio congelado
+  jugador1@tocayjuga.com  una reserva de cada estado (la pendiente vence en 15 min)
+  jugador2@tocayjuga.com  turnos nocturnos, turno corto, precio congelado
+
+  ADMIN (Admin1234)
+  admin@tocayjuga.com     usuarios, aprobar complejos, disputas y tickets
 `)
 }
 

@@ -194,9 +194,9 @@ async function main() {
   (normalmente http://localhost:3000).
 
   Para entrar:
-    Jugador   jugador@demo.com     Jugador1234
-    Dueño     admin@demo.com       Admin1234
-    Admin     admin@tocayjuga.com  Admin1234
+    Jugador   jugador1@tocayjuga.com   Jugador1234
+    Dueño     dueno1@tocayjuga.com     Dueno1234
+    Admin     admin@tocayjuga.com      Admin1234
 
   Ctrl+C para cortar (apaga también la base).
 `)

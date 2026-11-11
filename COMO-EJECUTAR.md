@@ -83,15 +83,15 @@ vez.
 
 La aplicación arranca con datos de demo ya cargados.
 
-| Rol                | Email                 | Contraseña    |
-| ------------------ | --------------------- | ------------- |
-| Jugador            | `jugador@demo.com`    | `Jugador1234` |
-| Jugador            | `jugador@dev.com`     | `Jugador1234` |
-| Dueño de complejos | `admin@demo.com`      | `Admin1234`   |
-| Dueño de complejos | `admin@dev.com`       | `Admin1234`   |
-| Administrador      | `admin@tocayjuga.com` | `Admin1234`   |
+| Rol                | Email                    | Contraseña    |
+| ------------------ | ------------------------ | ------------- |
+| Jugador            | `jugador1@tocayjuga.com` | `Jugador1234` |
+| Jugador            | `jugador2@tocayjuga.com` | `Jugador1234` |
+| Dueño de complejos | `dueno1@tocayjuga.com`   | `Dueno1234`   |
+| Dueño de complejos | `dueno2@tocayjuga.com`   | `Dueno1234`   |
+| Administrador      | `admin@tocayjuga.com`    | `Admin1234`   |
 
-`jugador@demo.com` tiene una reserva de cada estado posible (próxima, en curso,
+`jugador1@tocayjuga.com` tiene una reserva de cada estado posible (próxima, en curso,
 jugada, cancelada, pendiente de seña), así que es el mejor para recorrer la app.
 Las fechas se calculan al cargar los datos, así que siempre hay turnos pasados,
 actuales y futuros.
