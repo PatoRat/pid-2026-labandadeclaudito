@@ -8,6 +8,27 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    # Postgres descartable para los tests de integración, que escriben en la DB.
+    # Nunca se apunta a la base compartida del equipo: cada corrida arranca
+    # vacía y muere con el runner.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tocayjuga_ci
+        ports:
+          - 5432:5432
+        # Sin esto los pasos pueden arrancar antes de que Postgres acepte
+        # conexiones y el migrate deploy falla.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +50,22 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Tests de lib/ (sin DB)
+        run: npm test
+
+      - name: Migraciones en la DB de CI
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tocayjuga_ci
+
+      - name: Tests de integración (contra la DB de CI)
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tocayjuga_ci
+          # Los tests mockean @/auth, pero NextAuth se importa igual y pide
+          # tener la variable definida.
+          AUTH_SECRET: solo-para-los-tests-de-ci
 
       - name: Build
         run: npm run build
