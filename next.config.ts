@@ -2,9 +2,9 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   images: {
-    // Fotos de complejos subidas a Vercel Blob
+    // Las fotos que se suben en este fork van a public/uploads/ y se piden con
+    // un path relativo (/uploads/...), que no necesita remotePattern.
     remotePatterns: [
-      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
       // Fotos de demo del seed (prisma/seed.ts)
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],

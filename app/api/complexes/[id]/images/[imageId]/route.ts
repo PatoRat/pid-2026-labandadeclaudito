@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { borrarDelBlob } from '@/lib/blob'
+import { borrarArchivo } from '@/lib/archivos'
 
 export async function DELETE(
   _request: Request,
@@ -25,7 +25,7 @@ export async function DELETE(
   }
 
   await db.imagenComplejo.delete({ where: { id: imageId } })
-  await borrarDelBlob(imagen.url)
+  await borrarArchivo(imagen.url)
 
   return NextResponse.json({ ok: true }, { status: 200 })
 }

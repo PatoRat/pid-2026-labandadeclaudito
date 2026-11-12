@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 import { auth } from '@/auth'
 import { avatarSchema } from '@/lib/validations/user'
 import { esImagenReal } from '@/lib/validations/complex'
 import { db } from '@/lib/db'
-import { borrarDelBlob } from '@/lib/blob'
+import { borrarArchivo, guardarArchivo } from '@/lib/archivos'
 
 // Subir (o reemplazar) la foto de perfil
 export async function POST(request: Request) {
@@ -28,21 +27,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Solo se aceptan fotos JPG, PNG o WebP.' }, { status: 400 })
   }
 
-  // Si put() falla y no lo agarramos, Next devuelve un 500 con el body vacío
-  // y el cliente no puede mostrar ningún mensaje.
+  // Si guardarArchivo() falla y no lo agarramos, Next devuelve un 500 con el
+  // body vacío y el cliente no puede mostrar ningún mensaje.
   let urlDeLaFoto = ''
   try {
-    const blob = await put(`usuarios/${session.user.id}/${archivo.name}`, archivo, {
-      access: 'public',
-      addRandomSuffix: true,
-    })
-    urlDeLaFoto = blob.url
+    urlDeLaFoto = await guardarArchivo(`usuarios/${session.user.id}`, archivo)
   } catch (error) {
-    console.error('Error al subir la foto a Vercel Blob:', error)
-    return NextResponse.json(
-      { error: 'No se pudo guardar la foto. Revisá BLOB_READ_WRITE_TOKEN.' },
-      { status: 502 },
-    )
+    console.error('Error al guardar la foto en public/uploads:', error)
+    return NextResponse.json({ error: 'No se pudo guardar la foto.' }, { status: 502 })
   }
 
   const usuario = await db.usuario.findUnique({
@@ -57,7 +49,7 @@ export async function POST(request: Request) {
 
   // La anterior ya no la usa nadie
   if (usuario?.imagenUrl) {
-    await borrarDelBlob(usuario.imagenUrl)
+    await borrarArchivo(usuario.imagenUrl)
   }
 
   return NextResponse.json({ url: urlDeLaFoto }, { status: 201 })
@@ -82,7 +74,7 @@ export async function DELETE() {
     where: { id: session.user.id },
     data: { imagenUrl: null },
   })
-  await borrarDelBlob(usuario.imagenUrl)
+  await borrarArchivo(usuario.imagenUrl)
 
   return NextResponse.json({ ok: true }, { status: 200 })
 }

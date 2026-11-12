@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 import { esImagenReal } from '@/lib/validations/complex'
 import { disputeEvidenceSchema, MAX_EVIDENCIAS_POR_DISPUTA } from '@/lib/validations/dispute'
 import { requireRole } from '@/lib/auth-helpers'
+import { guardarArchivo } from '@/lib/archivos'
 import { db } from '@/lib/db'
 
 // Se sube una imagen por request: Vercel corta los bodies de más de 4.5 MB.
@@ -47,21 +47,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     )
   }
 
-  // Si put() falla y no lo agarramos, Next devuelve un 500 con el body vacío
-  // y el cliente no puede mostrar ningún mensaje.
+  // Si guardarArchivo() falla y no lo agarramos, Next devuelve un 500 con el
+  // body vacío y el cliente no puede mostrar ningún mensaje.
   let urlDeLaPrueba = ''
   try {
-    const blob = await put(`disputas/${disputaId}/${archivo.name}`, archivo, {
-      access: 'public',
-      addRandomSuffix: true,
-    })
-    urlDeLaPrueba = blob.url
-  } catch (errorDeBlob) {
-    console.error('Error al subir la evidencia a Vercel Blob:', errorDeBlob)
-    return NextResponse.json(
-      { error: 'No se pudo guardar la prueba. Revisá BLOB_READ_WRITE_TOKEN.' },
-      { status: 502 },
-    )
+    urlDeLaPrueba = await guardarArchivo(`disputas/${disputaId}`, archivo)
+  } catch (errorDeArchivo) {
+    console.error('Error al guardar la evidencia en public/uploads:', errorDeArchivo)
+    return NextResponse.json({ error: 'No se pudo guardar la prueba.' }, { status: 502 })
   }
 
   const evidencia = await db.evidenciaDisputa.create({

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
-import { del, put } from '@vercel/blob'
+import { borrarArchivo, guardarArchivo } from '@/lib/archivos'
 import { POST as registrarUsuario } from '@/app/api/users/route'
 import { PATCH as editarPerfil } from '@/app/api/users/me/route'
 import { POST as subirFoto, DELETE as quitarFoto } from '@/app/api/users/me/avatar/route'
@@ -30,8 +30,8 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
-  vi.mocked(put).mockClear()
-  vi.mocked(del).mockClear()
+  vi.mocked(guardarArchivo).mockClear()
+  vi.mocked(borrarArchivo).mockClear()
 })
 
 afterAll(async () => {
@@ -214,35 +214,35 @@ describe('Foto de perfil (/api/users/me/avatar)', () => {
     loginComo(jugador)
     const res = await subirFoto(imagenRequest(archivoImagen()))
     expect(res.status).toBe(201)
-    expect(put).toHaveBeenCalledTimes(1)
+    expect(guardarArchivo).toHaveBeenCalledTimes(1)
 
     const guardado = await db.usuario.findUnique({ where: { id: jugador.id } })
     expect(guardado?.imagenUrl).toContain(`usuarios/${jugador.id}/`)
   })
 
-  test('una foto nueva borra la anterior del Blob', async () => {
+  test('una foto nueva borra la anterior del disco', async () => {
     loginComo(jugador)
     const anterior = await db.usuario.findUnique({ where: { id: jugador.id } })
 
     const res = await subirFoto(imagenRequest(archivoImagen()))
     expect(res.status).toBe(201)
-    expect(del).toHaveBeenCalledWith(anterior!.imagenUrl)
+    expect(borrarArchivo).toHaveBeenCalledWith(anterior!.imagenUrl)
   })
 
   test('rechaza un archivo que no es imagen (400)', async () => {
     loginComo(jugador)
     const res = await subirFoto(imagenRequest(archivoImagen('text/plain')))
     expect(res.status).toBe(400)
-    expect(put).not.toHaveBeenCalled()
+    expect(guardarArchivo).not.toHaveBeenCalled()
   })
 
-  test('quitar la foto la borra de la DB y del Blob', async () => {
+  test('quitar la foto la borra de la DB y del disco', async () => {
     loginComo(jugador)
     const conFoto = await db.usuario.findUnique({ where: { id: jugador.id } })
 
     const res = await quitarFoto()
     expect(res.status).toBe(200)
-    expect(del).toHaveBeenCalledWith(conFoto!.imagenUrl)
+    expect(borrarArchivo).toHaveBeenCalledWith(conFoto!.imagenUrl)
 
     const sinFoto = await db.usuario.findUnique({ where: { id: jugador.id } })
     expect(sinFoto?.imagenUrl).toBeNull()
@@ -252,13 +252,13 @@ describe('Foto de perfil (/api/users/me/avatar)', () => {
     loginComo(jugador)
     const res = await quitarFoto()
     expect(res.status).toBe(404)
-    expect(del).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
   })
 
   test('sin sesión no se puede subir foto (401)', async () => {
     sinSesion()
     const res = await subirFoto(imagenRequest(archivoImagen()))
     expect(res.status).toBe(401)
-    expect(put).not.toHaveBeenCalled()
+    expect(guardarArchivo).not.toHaveBeenCalled()
   })
 })

@@ -10,12 +10,12 @@ vi.mock('@/auth', async () => {
   }
 })
 
-// No subir ni borrar archivos reales en Vercel Blob.
-vi.mock('@vercel/blob', () => {
+// No escribir ni borrar archivos reales en public/uploads/.
+vi.mock('@/lib/archivos', () => {
   return {
-    put: vi.fn(async (pathname: string) => {
-      return { url: `https://test.public.blob.vercel-storage.com/${pathname}` }
+    guardarArchivo: vi.fn(async (carpeta: string) => {
+      return `/uploads/${carpeta}/foto-de-test.png`
     }),
-    del: vi.fn(async () => {}),
+    borrarArchivo: vi.fn(async () => {}),
   }
 })
